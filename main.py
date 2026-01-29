@@ -7,7 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime, timedelta
 from io import BytesIO
-import textwrap # Para el salto de línea automático
+import textwrap 
 
 # --- CONFIGURACIÓN DE RUTAS Y LINKS ---
 USER_GH = "analyticsdatajg2025-cmd"
@@ -82,12 +82,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     # CARGA DE FUENTES
     try:
         f_marca = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 SemiBold.otf", 24)
-        f_prod = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 30)
-        f_simbolo = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 45) # S/ más pequeño
-        f_precio = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 90) # Número más grande
-        f_sku = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 16)
-        f_legales_bold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 11)
-        f_legales_reg = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 11) # Usamos la misma pero sin negrita simulada
+        f_prod = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 28)
+        f_simbolo = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 42) 
+        f_precio = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 88) 
+        f_sku = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 15)
+        f_legales_bold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 14) # Más grande
+        f_legales_reg = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 11) 
     except:
         f_marca = f_prod = f_precio = f_simbolo = f_sku = f_legales_bold = f_legales_reg = ImageFont.load_default()
 
@@ -98,55 +98,57 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             p_img = quitar_fondo_blanco(p_img)
             
             # 1. Pegar Imagen (Derecha)
-            p_img.thumbnail((450, 450))
-            img.paste(p_img, (520, 40), p_img)
+            p_img.thumbnail((440, 440))
+            img.paste(p_img, (530, 45), p_img)
 
-            # 2. Textos (Izquierda) - Coordenada X base: 60
-            base_x = 60
-            y_offset = 180 # Punto de inicio vertical debajo del título del fondo
+            # 2. Textos (CENTRADO EN LA MITAD IZQUIERDA - X: 250)
+            # Usamos anchor="mt" para centrar horizontalmente desde el punto medio (250)
+            center_x = 250
+            y_offset = 185 
 
             # Marca
-            draw.text((base_x, y_offset), row['Marca'], font=f_marca, fill=txt_color)
-            y_offset += 35
+            draw.text((center_x, y_offset), row['Marca'], font=f_marca, fill=txt_color, anchor="mt")
+            y_offset += 38
 
-            # Nombre del Producto (con wrap para evitar colisión)
-            nombre_wrapped = textwrap.wrap(row['Nombre del producto'], width=25) # Máximo 25 caracteres por línea
+            # Nombre del Producto (Wrapped y Centrado)
+            nombre_wrapped = textwrap.wrap(row['Nombre del producto'], width=22)
             for line in nombre_wrapped:
-                draw.text((base_x, y_offset), line, font=f_prod, fill=txt_color)
-                y_offset += 35
+                draw.text((center_x, y_offset), line, font=f_prod, fill=txt_color, anchor="mt")
+                y_offset += 32
             
-            y_offset += 15 # Espacio antes del precio
+            y_offset += 15 
 
-            # Precio (S/ pequeño + Número grande)
-            simbolo = "S/ "
+            # Precio (S/ pequeño + Número grande) - Lógica de centrado compuesto
             precio_str = str(row['Precio desc'])
-            # Dibujar S/
-            draw.text((base_x, y_offset + 35), simbolo, font=f_simbolo, fill=txt_color)
-            # Dibujar número al costado del S/
-            draw.text((base_x + 65, y_offset), precio_str, font=f_precio, fill=txt_color)
-            y_offset += 100
+            w_simbolo = draw.textlength("S/ ", font=f_simbolo)
+            w_monto = draw.textlength(precio_str, font=f_precio)
+            total_p_w = w_simbolo + w_monto
+            # X inicial para que el conjunto S/ + Monto esté centrado en 250
+            price_start_x = center_x - (total_p_w / 2)
 
-            # SKU
-            draw.text((base_x, y_offset), f"SKU: {row['SKU']}", font=f_sku, fill=txt_color)
+            draw.text((price_start_x, y_offset + 35), "S/ ", font=f_simbolo, fill=txt_color)
+            draw.text((price_start_x + w_simbolo, y_offset), precio_str, font=f_precio, fill=txt_color)
+            y_offset += 105
 
-            # 3. Legales (Inferior Izquierda)
-            legales_y = 485
+            # SKU (Solo el valor, centrado)
+            draw.text((center_x, y_offset), str(row['SKU']), font=f_sku, fill=txt_color, anchor="mt")
+
+            # 3. Legales (Inferior, un poco más arriba y negrita grande)
+            legales_y = 455 # Subimos la posición
             text_bold = "CONDICIONES GENERALES: "
             text_reg = str(row['Legales'])
             
-            # Dibujar negrita
-            draw.text((20, legales_y), text_bold, font=f_legales_bold, fill=txt_color)
-            # Dibujar el resto del texto después de la negrita
+            draw.text((25, legales_y), text_bold, font=f_legales_bold, fill=txt_color)
             offset_legal = draw.textlength(text_bold, font=f_legales_bold)
-            draw.text((20 + offset_legal, legales_y), text_reg, font=f_legales_reg, fill=txt_color)
+            # El texto legal regular va después de la negrita
+            draw.text((25 + offset_legal, legales_y + 3), text_reg, font=f_legales_reg, fill=txt_color)
 
         except Exception as e:
             print(f"Error en DISPLAY: {e}")
             return None
 
-    # Lógica para otros formatos (PPL, STORY, FLYER) se mantiene igual por ahora
+    # STORY, PPL y FLYER mantienen su lógica base
     elif formato == "STORY":
-        # ... (Mantener tu código anterior para Story)
         p_res = requests.get(row['Foto del producto calado'], timeout=10)
         p_img = Image.open(BytesIO(p_res.content)).convert("RGBA")
         p_img = quitar_fondo_blanco(p_img)
@@ -157,7 +159,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         draw.text((100, 1450), f"S/ {row['Precio desc']}", font=f_precio, fill=txt_color)
         draw.text((50, 1880), row['Legales'], font=f_legales_reg, fill=txt_color)
     elif formato == "PPL":
-        # ... (Mantener tu código anterior para PPL)
         p_res = requests.get(row['Foto del producto calado'], timeout=10)
         p_img = Image.open(BytesIO(p_res.content)).convert("RGBA")
         p_img = quitar_fondo_blanco(p_img)
@@ -168,7 +169,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         draw.text((630, 780), f"S/ {row['Precio desc']}", font=f_precio, fill=txt_color)
         draw.text((40, 960), row['Legales'], font=f_legales_reg, fill=txt_color)
     elif formato == "FLYER":
-        # ... (Mantener tu código anterior para Flyer)
         start_x, start_y = 65, 360
         for i, (idx, p_row) in enumerate(data_input.iterrows()):
             if i >= 8: break
@@ -190,12 +190,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     img.save(f"output/{fname}", quality=95)
     return f"{RAW_URL}{fname}"
 
-# --- EJECUCIÓN PRINCIPAL ---
+# --- EJECUCIÓN ---
 data, res_sheet, registros_existentes = get_sheets_data()
 os.makedirs('output', exist_ok=True)
 hora_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 
-# 1. Individuales
 for idx, row in data.iterrows():
     if str(row['Formato']).upper() == "FLYER": continue
     colores = ["AMARILLO", "AZUL"] if row['Tipo de diseño'] == "DSCTOS POWER" else ["AMARILLO"]
@@ -205,7 +204,6 @@ for idx, row in data.iterrows():
         url = generar_diseno(row, c)
         if url: res_sheet.append_row([hora_lima, row['SKU'], row['Tipo de diseño'], row['Formato'], c, url])
 
-# 2. Flyers
 flyers_group = data[data['Formato'].astype(str).str.upper() == "FLYER"]
 for id_f, group in flyers_group.groupby('ID_Flyer'):
     if str(id_f) in ["0", "0.0", ""]: continue
