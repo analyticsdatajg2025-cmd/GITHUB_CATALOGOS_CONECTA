@@ -5,7 +5,7 @@ import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from PIL import Image, ImageDraw, ImageFont
-from datetime import datetime, timedelta # Para la hora de Perú
+from datetime import datetime, timedelta
 from io import BytesIO
 
 # --- CONFIGURACIÓN DE RUTAS Y LINKS ---
@@ -19,7 +19,6 @@ def quitar_fondo_blanco(img):
     datos = img.getdata()
     nueva_data = []
     for item in datos:
-        # Si el píxel es muy cercano al blanco (R, G, B > 245), lo volvemos transparente
         if item[0] > 245 and item[1] > 245 and item[2] > 245:
             nueva_data.append((255, 255, 255, 0))
         else:
@@ -42,12 +41,23 @@ def get_sheets_data():
     except:
         res_sheet = sheet.add_worksheet(title="Resultados", rows="1000", cols="10")
     
-    # Verificación robusta de encabezados
+    # 1. GESTIÓN DE ENCABEZADOS: Limpiar y asegurar fila 1
     valores_actuales = res_sheet.get_all_values()
     if not valores_actuales or len(valores_actuales) == 0:
         res_sheet.insert_row(["Fecha", "ID", "Diseño", "Formato", "Color", "Link"], 1)
+        # Actualizamos valores_actuales después de insertar
+        valores_actuales = [["Fecha", "ID", "Diseño", "Formato", "Color", "Link"]]
     
-    return data, res_sheet
+    # 2. CARGAR REGISTROS EXISTENTES PARA EVITAR DUPLICADOS
+    # Creamos un set de llaves únicas (ID + Formato + Color) para comparar rápido
+    registros_viejos = set()
+    if len(valores_actuales) > 1:
+        for row in valores_actuales[1:]: # Omitimos el encabezado
+            if len(row) >= 5:
+                llave = f"{row[1]}_{row[3]}_{row[4]}".upper()
+                registros_viejos.add(llave)
+    
+    return data, res_sheet, registros_viejos
 
 # --- LÓGICA DE DISEÑO ---
 def generar_diseno(data_input, color_version="AMARILLO"):
@@ -98,7 +108,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             try:
                 p_res = requests.get(p_row['Foto del producto calado'], timeout=10)
                 p_img = Image.open(BytesIO(p_res.content)).convert("RGBA")
-                # QUITAR FONDO BLANCO
                 p_img = quitar_fondo_blanco(p_img)
                 p_img.thumbnail((320, 320))
                 img.paste(p_img, (x + 80, y), p_img)
@@ -113,7 +122,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         try:
             p_res = requests.get(row['Foto del producto calado'], timeout=10)
             p_img = Image.open(BytesIO(p_res.content)).convert("RGBA")
-            # QUITAR FONDO BLANCO
             p_img = quitar_fondo_blanco(p_img)
             
             if formato == "DISPLAY":
@@ -144,25 +152,38 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     return f"{RAW_URL}{fname}"
 
 # --- EJECUCIÓN ---
-data, res_sheet = get_sheets_data()
+data, res_sheet, registros_existentes = get_sheets_data()
 os.makedirs('output', exist_ok=True)
 
-# HORA LIMA (UTC-5)
 hora_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 
+# 1. Procesar Individuales (Evitando duplicados)
 for idx, row in data.iterrows():
     if str(row['Formato']).upper() == "FLYER": continue
     colores = ["AMARILLO", "AZUL"] if row['Tipo de diseño'] == "DSCTOS POWER" else ["AMARILLO"]
+    
     for c in colores:
+        # Verificamos si ya existe esta combinación
+        llave_actual = f"{row['SKU']}_{row['Formato']}_{c}".upper()
+        if llave_actual in registros_existentes:
+            continue
+            
         url = generar_diseno(row, c)
         if url:
             res_sheet.append_row([hora_lima, row['SKU'], row['Tipo de diseño'], row['Formato'], c, url])
 
+# 2. Procesar Flyers (Evitando duplicados)
 flyers_group = data[data['Formato'].astype(str).str.upper() == "FLYER"]
 for id_f, group in flyers_group.groupby('ID_Flyer'):
     if str(id_f) in ["0", "0.0", ""]: continue
     colores = ["AZUL", "AMARILLO"] if group.iloc[0]['Tipo de diseño'] == "DSCTOS POWER" else ["AMARILLO"]
+    
     for c in colores:
+        # Verificamos si ya existe esta combinación para el Flyer
+        llave_flyer = f"{id_f}_FLYER_{c}".upper()
+        if llave_flyer in registros_existentes:
+            continue
+            
         url = generar_diseno(group, c)
         if url:
             res_sheet.append_row([hora_lima, str(id_f), group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
