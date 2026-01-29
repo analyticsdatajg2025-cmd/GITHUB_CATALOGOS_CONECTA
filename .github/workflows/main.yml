@@ -23,7 +23,7 @@ jobs:
       - name: Push Designs
         run: |
           git config --global user.name "Elias-Martech-Bot"
-          git config --global user.email "elias@juntoz.com"
+          git config --global user.email "analytics.data.jg.2025@gmail.com"
           git add output/*
-          git commit -m "Auto-generación de piezas - $(date)" || echo "Sin cambios"
+          git commit -m "Auto-generación de piezas - $(date -u -d '5 hours ago' '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
           git push
