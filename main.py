@@ -134,7 +134,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
         elif formato == "PPL":
             # Aumento de imagen en PPL
-            pi.thumbnail((460, 460)); img.paste(pi, (500-pi.width//2, 470-pi.height//2), pi)
+            pi.thumbnail((475, 475)); img.paste(pi, (500-pi.width//2, 470-pi.height//2), pi)
             draw.text((275, 760), row['Marca'], font=f_m, fill=txt_c, anchor="mt"); ny = 810
             for l in textwrap.wrap(row['Nombre del producto'], width=22):
                 draw.text((275, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 28
