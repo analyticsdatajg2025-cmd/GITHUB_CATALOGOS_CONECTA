@@ -68,19 +68,19 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 32)
             f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 105)
             f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 42)
-            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 28) # Reducido
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 22) # Reducido
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
         elif formato == "PPL":
             f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 44)
             f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 24)
             f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 85)
             f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 36)
-            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 18) # Reducido
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14) # Reducido
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)
         else: # DISPLAY
             f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 35); f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 18)
             f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 75); f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 30)
-            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 16); f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 9)
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13); f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 9)
         
         f_s_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 11); f_f = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 24)
     except: f_m = f_p = f_pv = f_ps = f_s_ind = f_s_fly = f_f = f_l = ImageFont.load_default()
@@ -98,7 +98,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             pi = Image.open(BytesIO(requests.get(p['Foto del producto calado']).content)).convert("RGBA")
             pi.thumbnail((box_h-90, box_h-110)); img.paste(pi, (int(xp+(455-pi.width)//2), int(yp+10)), pi)
             cl, cr = xp+115, xp+345
-            f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 26 if len(p['Marca']) < 12 else 20)
+            f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 26 if len(p['Marca']) < 12 else 18)
             draw.text((cl, yp+box_h-100), p['Marca'], font=f_m_fly, fill=(0,0,0), anchor="mm")
             ny = yp+box_h-65
             for ln in textwrap.wrap(p['Nombre del producto'], width=18)[:2]:
@@ -126,7 +126,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         
         elif formato == "STORY":
             pi.thumbnail((900, 900)); img.paste(pi, (540-pi.width//2, 530), pi)
-            anchor_y = 1430 # NIVELACIÓN COMPARTIDA
+            anchor_y = 1430 # Nivelado Marca/Precio
             draw.text((270, anchor_y), row['Marca'], font=f_m, fill=txt_c, anchor="mm")
             ny = anchor_y + 65
             for l in textwrap.wrap(row['Nombre del producto'], width=20):
@@ -134,15 +134,15 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             p_v = str(row['Precio desc'])
             tw = draw.textlength("S/ ", font=f_ps) + draw.textlength(p_v, font=f_pv) + 85
             px = 810 - tw//2
-            draw.text((px, anchor_y), "S/ ", font=f_ps, fill=txt_c, anchor="mm") # NIVELADO CON MARCA
+            draw.text((px, anchor_y), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
             draw.text((px + draw.textlength("S/ ", font=f_ps) + 85, anchor_y), p_v, font=f_pv, fill=txt_c, anchor="mm")
-            draw.text((810, anchor_y + 90), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") # JUNTADO AL PRECIO
+            draw.text((810, anchor_y + 75), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") # Juntado
             draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 1845, 65, 1015, txt_c)
 
         elif formato == "PPL":
-            # --- MAX IMPACT PPL ---
-            pi.thumbnail((620, 620)); img.paste(pi, (500-pi.width//2, 440-pi.height//2), pi)
-            anchor_y = 780 # NIVELACIÓN COMPARTIDA
+            # --- MAX IMPACT PPL NIVELADO ---
+            pi.thumbnail((650, 650)); img.paste(pi, (500-pi.width//2, 460-pi.height//2), pi)
+            anchor_y = 780 # Nivelado Marca/Precio
             draw.text((275, anchor_y), row['Marca'], font=f_m, fill=txt_c, anchor="mm")
             ny = anchor_y + 55
             for l in textwrap.wrap(row['Nombre del producto'], width=22):
@@ -150,9 +150,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             p_v = str(row['Precio desc'])
             tw = draw.textlength("S/ ", font=f_ps) + draw.textlength(p_v, font=f_pv) + 80
             px = 735 - tw//2
-            draw.text((px, anchor_y), "S/ ", font=f_ps, fill=txt_c, anchor="mm") # NIVELADO CON MARCA
+            draw.text((px, anchor_y), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
             draw.text((px + draw.textlength("S/ ", font=f_ps) + 80, anchor_y), p_v, font=f_pv, fill=txt_c, anchor="mm")
-            draw.text((735, anchor_y + 75), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") # JUNTADO AL PRECIO
+            draw.text((735, anchor_y + 60), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") # Juntado
             draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 950, 50, 950, txt_c)
 
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{color_version}.jpg"
