@@ -18,9 +18,8 @@ RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 def quitar_fondo_blanco(img):
     return img
 
-def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill):
-    """Dibuja texto justificado con espaciado entre palabras optimizado (más junto)"""
-    # Aumentamos el width para que entren más palabras por línea y se reduzcan los huecos
+def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing=5):
+    """Dibuja texto justificado con espaciado entre palabras optimizado."""
     available_w = x_end - x_start
     wrap_width = 135 if available_w > 900 else 115
     lines = textwrap.wrap(text, width=wrap_width)
@@ -36,7 +35,7 @@ def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill):
             for word in words:
                 draw.text((curr_x, y), word, font=font, fill=fill)
                 curr_x += draw.textlength(word, font=font) + space_width
-        y += font.getbbox("Ay")[3] + 4
+        y += font.getbbox("Ay")[3] + line_spacing
 
 def get_sheets_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -67,7 +66,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
     try:
         is_big = formato in ["PPL", "STORY"]
-        f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 41 if is_big else 36)
+        f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 42 if is_big else 36)
         f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 22 if is_big else 18)
         f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 82 if is_big else 75)
         f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 34 if is_big else 30)
@@ -88,7 +87,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             xp, yp = 65+(i%2)*495, 345+(i//2)*(box_h+12)
             draw.rounded_rectangle([xp, yp, xp+455, yp+box_h], radius=15, fill=(255,255,255), outline=border_c, width=2)
             pi = Image.open(BytesIO(requests.get(p['Foto del producto calado']).content)).convert("RGBA")
-            pi.thumbnail((box_h-145, box_h-175)); img.paste(pi, (int(xp+(455-pi.width)//2), int(yp+20)), pi)
+            # Aumento de imagen en Flyer
+            pi.thumbnail((box_h-110, box_h-130))
+            img.paste(pi, (int(xp+(455-pi.width)//2), int(yp+15)), pi)
             cl, cr = xp+115, xp+345
             f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 28 if len(p['Marca']) < 12 else 21)
             draw.text((cl, yp+box_h-100), p['Marca'], font=f_m_fly, fill=(0,0,0), anchor="mm")
@@ -114,9 +115,13 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((px, ny+45), "S/ ", font=f_ps, fill=txt_c, anchor="lm")
             draw.text((px+draw.textlength("S/ ", font=f_ps)+12, ny+45), p_v, font=f_pv, fill=txt_c, anchor="lm")
             draw.text((cx, ny+90), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
-            draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 455, 40, 500, txt_c)
+            # DISPLAY: Regreso a multiline_text con separación extra para legibilidad
+            leg_txt = textwrap.fill("CONDICIONES GENERALES: " + str(row['Legales']), width=100)
+            draw.multiline_text((40, 450), leg_txt, font=f_l, fill=txt_c, spacing=6)
+        
         elif formato == "STORY":
-            pi.thumbnail((750, 750)); img.paste(pi, (540-pi.width//2, 650), pi)
+            # Aumento de imagen en Story
+            pi.thumbnail((820, 820)); img.paste(pi, (540-pi.width//2, 630), pi)
             draw.text((270, 1420), row['Marca'], font=f_m, fill=txt_c, anchor="mt"); ny = 1475
             for l in textwrap.wrap(row['Nombre del producto'], width=20):
                 draw.text((270, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 30
@@ -126,8 +131,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((px + draw.textlength("S/ ", font=f_ps) + 65, 1475), p_v, font=f_pv, fill=txt_c, anchor="mm")
             draw.text((810, 1535), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm")
             draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 1850, 65, 1015, txt_c)
+
         elif formato == "PPL":
-            pi.thumbnail((410, 410)); img.paste(pi, (500-pi.width//2, 480-pi.height//2), pi)
+            # Aumento de imagen en PPL
+            pi.thumbnail((460, 460)); img.paste(pi, (500-pi.width//2, 470-pi.height//2), pi)
             draw.text((275, 760), row['Marca'], font=f_m, fill=txt_c, anchor="mt"); ny = 810
             for l in textwrap.wrap(row['Nombre del producto'], width=22):
                 draw.text((275, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 28
