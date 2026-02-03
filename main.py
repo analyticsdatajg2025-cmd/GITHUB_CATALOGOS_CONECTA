@@ -18,6 +18,7 @@ def quitar_fondo_blanco(img):
     return img
 
 def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing=5):
+    """Dibuja texto con bordes rectos (Word-style) y espaciado optimizado."""
     available_w = x_end - x_start
     wrap_width = 135 if available_w > 900 else 115
     lines = textwrap.wrap(text, width=wrap_width)
@@ -68,14 +69,14 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 32)
             f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 105)
             f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 42)
-            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 20) # SKU Reducido
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 20)
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
         elif formato == "PPL":
             f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 44)
             f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 24)
             f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 85)
             f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 36)
-            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14) # SKU Reducido
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)
         else: # DISPLAY
             f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 35); f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 18)
@@ -136,13 +137,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             px = 810 - tw//2
             draw.text((px, anchor_y), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
             draw.text((px + draw.textlength("S/ ", font=f_ps) + 85, anchor_y), p_v, font=f_pv, fill=txt_c, anchor="mm")
-            # SKU STORY: Más pequeño y pegado al precio
             draw.text((810, anchor_y + 65), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") 
             draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 1845, 65, 1015, txt_c)
 
         elif formato == "PPL":
-            # --- AJUSTE PPL: Bajado y Agrandado ---
-            pi.thumbnail((630, 630)); img.paste(pi, (500-pi.width//2, 465-pi.height//2), pi)
+            # --- AJUSTE PPL SENIOR: Bajado a 475 para evitar choque con título ---
+            pi.thumbnail((610, 610)); img.paste(pi, (500-pi.width//2, 475-pi.height//2), pi)
             anchor_y = 780 # Nivelado Marca/Precio
             draw.text((275, anchor_y), row['Marca'], font=f_m, fill=txt_c, anchor="mm")
             ny = anchor_y + 55
@@ -153,7 +153,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             px = 735 - tw//2
             draw.text((px, anchor_y), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
             draw.text((px + draw.textlength("S/ ", font=f_ps) + 80, anchor_y), p_v, font=f_pv, fill=txt_c, anchor="mm")
-            # SKU PPL: Reducido y pegado al precio
             draw.text((735, anchor_y + 60), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") 
             draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 950, 50, 950, txt_c)
 
