@@ -142,7 +142,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
         elif formato == "PPL":
             # --- AJUSTE PPL: Bajado y Agrandado ---
-            pi.thumbnail((640, 640)); img.paste(pi, (500-pi.width//2, 465-pi.height//2), pi)
+            pi.thumbnail((630, 630)); img.paste(pi, (500-pi.width//2, 465-pi.height//2), pi)
             anchor_y = 780 # Nivelado Marca/Precio
             draw.text((275, anchor_y), row['Marca'], font=f_m, fill=txt_c, anchor="mm")
             ny = anchor_y + 55
