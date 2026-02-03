@@ -39,10 +39,6 @@ def get_sheets_data():
         res_sheet = sheet.add_worksheet(title="Resultados", rows="1000", cols="10")
     
     valores_actuales = res_sheet.get_all_values()
-    if not valores_actuales or len(valores_actuales) == 0:
-        res_sheet.insert_row(["Fecha", "ID", "Diseño", "Formato", "Color", "Link"], 1)
-        valores_actuales = [["Fecha", "ID", "Diseño", "Formato", "Color", "Link"]]
-    
     registros_viejos = set()
     if len(valores_actuales) > 1:
         for row in valores_actuales[1:]:
@@ -52,29 +48,25 @@ def get_sheets_data():
     
     return data, res_sheet, registros_viejos
 
-# --- LÓGICA DE DISEÑO ---
 def generar_diseno(data_input, color_version="AMARILLO"):
     is_flyer = isinstance(data_input, pd.DataFrame)
     row = data_input.iloc[0] if is_flyer else data_input
     
     tipo = row['Tipo de diseño']
     formato = str(row['Formato']).upper()
-    path_fonts = f"TIPOGRAFIA/LC/{tipo}"
+    path_fonts = "TIPOGRAFIA/LC" # RUTA UNIFICADA
     path_fondos = f"FONDOS/LC/{tipo}"
     
-    # Regla base de colores de texto
     txt_color = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
     accent_color = (255, 230, 0) if color_version == "AZUL" else (0, 0, 0)
     
     ext = ".png" if formato == "FLYER" else ".jpg"
     posibles_nombres = [
         f"LC - {tipo} - {formato} FONDO {color_version}{ext}",
-        f"LC -  {tipo} - {formato} FONDO {color_version}{ext}",
-        f"LC - {tipo} - {formato} {color_version}{ext}",
-        f"LC -  {tipo} - {formato} {color_version}{ext}"
+        f"LC - {tipo} - {formato} {color_version}{ext}"
     ]
     if "FLYER" in formato:
-        posibles_nombres.extend([f"LC - {tipo} - FLYER {color_version}{ext}", f"LC -  {tipo} - FLYER {color_version}{ext}"])
+        posibles_nombres.extend([f"LC - {tipo} - FLYER {color_version}{ext}"])
 
     full_path_fondo = next((os.path.join(path_fondos, n) for n in posibles_nombres if os.path.exists(os.path.join(path_fondos, n))), None)
     if not full_path_fondo: return None
@@ -82,162 +74,125 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     img = Image.open(full_path_fondo).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    # FUENTES
+    # --- FUENTES ACTUALIZADAS ---
     try:
-        f_marca = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 SemiBold.otf", 22)
-        f_prod = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 24)
-        f_simbolo = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 35)
-        f_precio = ImageFont.truetype(f"{path_fonts}/Gotham-Bold_0.otf", 75)
-        f_sku = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 14)
-        f_fecha = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 28)
-        f_leg_bold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 14)
-        f_leg_reg = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 10)
+        f_marca = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 35) # Más notoriedad
+        f_prod = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 24) # Tamaño reducido
+        f_precio = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 85)
+        f_sku = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
+        f_fecha = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 26)
+        f_leg_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 13)
+        f_leg_reg = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 10)
     except:
-        f_marca = f_prod = f_precio = f_simbolo = f_sku = f_fecha = f_leg_bold = f_leg_reg = ImageFont.load_default()
+        f_marca = f_prod = f_precio = f_sku = f_fecha = f_leg_bold = f_leg_reg = ImageFont.load_default()
 
     if formato == "FLYER":
         try:
-            # 1. Etiqueta de Fecha (Top)
+            # 1. Fecha Dinámica (Debajo del Título de Fondo)
             fecha_txt = str(row['Fecha_disponibilidad_flyer']).upper()
             w_f = draw.textlength(fecha_txt, font=f_fecha)
-            # Dibujar contorno de fecha (rectángulo redondeado)
-            draw.rounded_rectangle([540 - (w_f/2) - 20, 115, 540 + (w_f/2) + 20, 165], radius=15, outline=accent_color, width=3)
-            draw.text((540, 140), fecha_txt, font=f_fecha, fill=accent_color, anchor="mm")
+            # Dibujar etiqueta de fecha centrada arriba
+            draw.rounded_rectangle([540-(w_f/2)-20, 230, 540+(w_f/2)+20, 280], radius=10, outline=accent_color, width=3)
+            draw.text((540, 255), fecha_txt, font=f_fecha, fill=accent_color, anchor="mm")
 
-            # 2. Cuadrícula de Productos (Máx 8, 2 por fila)
-            start_y = 350
-            box_w, box_h = 460, 360
-            margin_x, margin_y = 60, 25
-
+            # 2. Cuadrícula adaptable (Máx 8)
+            num_prod = len(data_input)
+            box_h = 320 if num_prod > 4 else 450 # Ajuste de tamaño según cantidad
+            start_y = 320
+            margin_y = 15
+            
             for i, (idx, p_row) in enumerate(data_input.iterrows()):
                 if i >= 8: break
-                col, fila_idx = i % 2, i // 2
-                x_pos = margin_x + (col * (box_w + 40))
-                y_pos = start_y + (fila_idx * (box_h + margin_y))
+                col, fila = i % 2, i // 2
+                x_p = 60 + (col * 500)
+                y_p = start_y + (fila * (box_h + margin_y))
 
-                # Dibujar cuadro del producto (blanco con borde fino)
-                draw.rounded_rectangle([x_pos, y_pos, x_pos + box_w, y_pos + box_h], radius=20, fill=(255,255,255), outline=(200,200,200), width=2)
-
+                # Cuadro de producto
+                draw.rounded_rectangle([x_p, y_p, x_p+460, y_p+box_h], radius=15, fill=(255,255,255), outline=(220,220,220), width=1)
+                
                 # Imagen del producto
                 p_res = requests.get(p_row['Foto del producto calado'], timeout=10)
                 p_img = Image.open(BytesIO(p_res.content)).convert("RGBA")
                 p_img = quitar_fondo_blanco(p_img)
-                p_img.thumbnail((280, 200))
-                img.paste(p_img, (int(x_pos + (box_w - p_img.width)//2), int(y_pos + 20)), p_img)
+                p_img.thumbnail((box_h-100, box_h-150))
+                img.paste(p_img, (int(x_p + (460-p_img.width)//2), int(y_p + 15)), p_img)
 
-                # Coordenadas internas para textos
-                y_text = y_pos + 235
-                l_center = x_pos + (box_w // 4)
-                r_center = x_pos + (3 * box_w // 4)
-
-                # Izquierda: Marca y Nombre
-                draw.text((l_center, y_text), p_row['Marca'], font=f_marca, fill=(0,0,0), anchor="mm")
-                p_name_y = y_text + 35
-                wrap_n = textwrap.wrap(p_row['Nombre del producto'], width=15)
+                # Info de producto
+                center_l = x_p + 115
+                center_r = x_p + 345
+                draw.text((center_l, y_p+box_h-80), p_row['Marca'], font=f_marca, fill=(0,0,0), anchor="mm")
+                
+                wrap_n = textwrap.wrap(p_row['Nombre del producto'], width=18)
+                ny = y_p + box_h - 45
                 for line in wrap_n[:2]:
-                    draw.text((l_center, p_name_y), line, font=f_prod, fill=(0,0,0), anchor="mm")
-                    p_name_y += 28
+                    draw.text((center_l, ny), line, font=f_prod, fill=(0,0,0), anchor="mm")
+                    ny += 25
+                
+                draw.text((center_r, y_p+box_h-60), f"S/{p_row['Precio desc']}", font=f_precio, fill=(0,0,0), anchor="mm")
+                draw.text((center_r, y_p+box_h-20), str(p_row['SKU']), font=f_sku, fill=(80,80,80), anchor="mm")
 
-                # Derecha: Precio y SKU
-                p_str = str(p_row['Precio desc'])
-                w_s = draw.textlength("S/", font=f_simbolo)
-                w_m = draw.textlength(p_str, font=f_precio)
-                p_start_x = r_center - (w_s + w_m)//2
-                draw.text((p_start_x, y_text + 25), "S/", font=f_simbolo, fill=(0,0,0), anchor="lm")
-                draw.text((p_start_x + w_s, y_text + 25), p_str, font=f_precio, fill=(0,0,0), anchor="lm")
-                draw.text((r_center, y_text + 85), str(p_row['SKU']), font=f_sku, fill=(100,100,100), anchor="mm")
-
-            # 3. Legales (Bottom)
-            legales_y = 1860
-            text_bold = "CONDICIONES GENERALES: "
-            draw.text((60, legales_y), text_bold, font=f_leg_bold, fill=txt_color)
-            off_l = draw.textlength(text_bold, font=f_leg_bold)
-            draw.text((60 + off_l, legales_y + 3), str(row['Legales']), font=f_leg_reg, fill=txt_color)
+            # 3. Legales con Wrap
+            legales_y = 1840
+            text_legal = "CONDICIONES GENERALES: " + str(row['Legales'])
+            wrapped_leg = textwrap.fill(text_legal, width=105)
+            draw.text((60, legales_y), wrapped_leg, font=f_leg_reg, fill=txt_color)
 
         except Exception as e:
             print(f"Error en FLYER: {e}")
             return None
 
-    # Lógica para DISPLAY, PPL y STORY (Sin cambios)
-    elif formato == "DISPLAY":
+    else:
+        # DISPLAY, STORY, PPL
         try:
             p_res = requests.get(row['Foto del producto calado'], timeout=10)
             p_img = Image.open(BytesIO(p_res.content)).convert("RGBA")
             p_img = quitar_fondo_blanco(p_img)
-            p_img.thumbnail((440, 440))
-            img.paste(p_img, (530, 45), p_img)
-            center_x = 250
-            y_offset = 185 
-            draw.text((center_x, y_offset), row['Marca'], font=f_marca, fill=txt_color, anchor="mt")
-            y_offset += 38
-            nombre_wrapped = textwrap.wrap(row['Nombre del producto'], width=22)
-            for line in nombre_wrapped:
-                draw.text((center_x, y_offset), line, font=f_prod, fill=txt_color, anchor="mt")
-                y_offset += 32
-            y_offset += 15 
-            precio_str = str(row['Precio desc'])
-            w_simbolo = draw.textlength("S/ ", font=f_simbolo)
-            w_monto = draw.textlength(precio_str, font=f_precio)
-            total_p_w = w_simbolo + w_monto
-            price_start_x = center_x - (total_p_w / 2)
-            draw.text((price_start_x, y_offset + 35), "S/ ", font=f_simbolo, fill=txt_color)
-            draw.text((price_start_x + w_simbolo, y_offset), precio_str, font=f_precio, fill=txt_color)
-            y_offset += 105
-            draw.text((center_x, y_offset), str(row['SKU']), font=f_sku, fill=txt_color, anchor="mt")
-            legales_y = 455 
-            text_bold = "CONDICIONES GENERALES: "
-            text_reg = str(row['Legales'])
-            draw.text((25, legales_y), text_bold, font=f_leg_bold, fill=txt_color)
-            offset_legal = draw.textlength(text_bold, font=f_leg_bold)
-            draw.text((25 + offset_legal, legales_y + 3), text_reg, font=f_leg_reg, fill=txt_color)
-        except: return None
+            
+            if formato == "DISPLAY":
+                p_img.thumbnail((440, 440))
+                img.paste(p_img, (530, 45), p_img)
+                # Textos Izquierda centrados
+                cx = 265
+                draw.text((cx, 185), row['Marca'], font=f_marca, fill=txt_color, anchor="mt")
+                nombre_w = textwrap.wrap(row['Nombre del producto'], width=20)
+                ny = 230
+                for l in nombre_w:
+                    draw.text((cx, ny), l, font=f_prod, fill=txt_color, anchor="mt")
+                    ny += 28
+                draw.text((cx, ny+15), f"S/ {row['Precio desc']}", font=f_precio, fill=txt_color, anchor="mt")
+                draw.text((cx, ny+105), str(row['SKU']), font=f_sku, fill=txt_color, anchor="mt")
+                # Legales
+                leg_w = textwrap.fill("CONDICIONES GENERALES: " + str(row['Legales']), width=90)
+                draw.text((25, 460), leg_w, font=f_leg_reg, fill=txt_color)
 
-    elif formato == "PPL":
-        try:
-            p_res = requests.get(row['Foto del producto calado'], timeout=10)
-            p_img = Image.open(BytesIO(p_res.content)).convert("RGBA")
-            p_img = quitar_fondo_blanco(p_img)
-            p_img.thumbnail((520, 520))
-            img.paste(p_img, (500 - p_img.width // 2, 450 - p_img.height // 2), p_img)
-            l_center_x, r_center_x, y_start = 270, 730, 760 
-            draw.text((l_center_x, y_start), row['Marca'], font=f_marca, fill=txt_color, anchor="mt")
-            p_name_y = y_start + 40
-            wrap_p = textwrap.wrap(row['Nombre del producto'], width=20)
-            for line in wrap_p:
-                draw.text((l_center_x, p_name_y), line, font=f_prod, fill=txt_color, anchor="mt")
-                p_name_y += 32
-            precio_str = str(row['Precio desc'])
-            total_p_w = draw.textlength("S/ ", font=f_simbolo) + draw.textlength(precio_str, font=f_precio)
-            p_x = r_center_x - (total_p_w / 2)
-            draw.text((p_x, y_start + 35), "S/ ", font=f_simbolo, fill=txt_color)
-            draw.text((p_x + draw.textlength("S/ ", font=f_simbolo), y_start), precio_str, font=f_precio, fill=txt_color)
-            draw.text((r_center_x, y_start + 110), str(row['SKU']), font=f_sku, fill=txt_color, anchor="mt")
-            draw.text((40, 945), "CONDICIONES GENERALES: ", font=f_leg_bold, fill=txt_color)
-            draw.text((40 + draw.textlength("CONDICIONES GENERALES: ", font=f_leg_bold), 948), str(row['Legales']), font=f_leg_reg, fill=txt_color)
-        except: return None
+            elif formato == "STORY":
+                p_img.thumbnail((750, 750))
+                img.paste(p_img, (540-p_img.width//2, 650), p_img)
+                draw.text((270, 1420), row['Marca'], font=f_marca, fill=txt_color, anchor="mt")
+                nombre_w = textwrap.wrap(row['Nombre del producto'], width=18)
+                ny = 1465
+                for l in nombre_w:
+                    draw.text((270, ny), l, font=f_prod, fill=txt_color, anchor="mt")
+                    ny += 35
+                draw.text((810, 1455), f"S/ {row['Precio desc']}", font=f_precio, fill=txt_color, anchor="mm")
+                draw.text((810, 1545), str(row['SKU']), font=f_sku, fill=txt_color, anchor="mm")
+                leg_w = textwrap.fill("CONDICIONES GENERALES: " + str(row['Legales']), width=100)
+                draw.text((60, 1840), leg_w, font=f_leg_reg, fill=txt_color)
 
-    elif formato == "STORY":
-        try:
-            p_res = requests.get(row['Foto del producto calado'], timeout=10)
-            p_img = Image.open(BytesIO(p_res.content)).convert("RGBA")
-            p_img = quitar_fondo_blanco(p_img)
-            p_img.thumbnail((750, 750))
-            img.paste(p_img, (540 - p_img.width // 2, 650), p_img)
-            l_c, r_c, y_s = 270, 810, 1420 
-            draw.text((l_c, y_s), row['Marca'], font=f_marca, fill=txt_color, anchor="mt")
-            p_n_y = y_s + 45
-            wrap_s = textwrap.wrap(row['Nombre del producto'], width=18)
-            for line in wrap_s:
-                draw.text((l_c, p_n_y), line, font=f_prod, fill=txt_color, anchor="mt")
-                p_n_y += 35
-            p_str = str(row['Precio desc'])
-            total_p_w = draw.textlength("S/ ", font=f_simbolo) + draw.textlength(p_str, font=f_precio)
-            p_x = r_c - (total_p_w / 2)
-            draw.text((p_x, y_s + 35), "S/ ", font=f_simbolo, fill=txt_color)
-            draw.text((p_x + draw.textlength("S/ ", font=f_simbolo), y_s), p_str, font=f_precio, fill=txt_color)
-            draw.text((r_c, y_s + 125), str(row['SKU']), font=f_sku, fill=txt_color, anchor="mt")
-            draw.text((60, 1860), "CONDICIONES GENERALES: ", font=f_leg_bold, fill=txt_color)
-            draw.text((60 + draw.textlength("CONDICIONES GENERALES: ", font=f_leg_bold), 1863), str(row['Legales']), font=f_leg_reg, fill=txt_color)
+            elif formato == "PPL":
+                p_img.thumbnail((520, 520))
+                img.paste(p_img, (500-p_img.width//2, 450-p_img.height//2), p_img)
+                draw.text((270, 760), row['Marca'], font=f_marca, fill=txt_color, anchor="mt")
+                nombre_w = textwrap.wrap(row['Nombre del producto'], width=20)
+                ny = 800
+                for l in nombre_w:
+                    draw.text((270, ny), l, font=f_prod, fill=txt_color, anchor="mt")
+                    ny += 32
+                draw.text((730, 795), f"S/ {row['Precio desc']}", font=f_precio, fill=txt_color, anchor="mm")
+                draw.text((730, 870), str(row['SKU']), font=f_sku, fill=txt_color, anchor="mm")
+                leg_w = textwrap.fill("CONDICIONES GENERALES: " + str(row['Legales']), width=95)
+                draw.text((40, 935), leg_w, font=f_leg_reg, fill=txt_color)
+
         except: return None
 
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{color_version}.jpg"
