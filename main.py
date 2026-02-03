@@ -33,8 +33,11 @@ def get_sheets_data():
     client = gspread.authorize(creds)
     sheet = client.open_by_key("1PmvCyC3d0VvvZSdvWM73NYusrYevVYtRzVs2gbxjw1M")
     
-    # LEER DESDE HOJA "prueba"
+    # Lectura de hoja "prueba"
     data = pd.DataFrame(sheet.worksheet("prueba").get_all_records())
+    # Limpiar posibles espacios en nombres de columnas
+    data.columns = [c.strip() for c in data.columns]
+    
     try:
         res_sheet = sheet.worksheet("Resultados")
     except:
@@ -42,10 +45,12 @@ def get_sheets_data():
     
     valores_actuales = res_sheet.get_all_values()
     registros_viejos = set()
+    
+    # Si la hoja tiene más de una fila (encabezados + data)
     if len(valores_actuales) > 1:
         for row in valores_actuales[1:]:
-            if len(row) >= 2:
-                registros_viejos.add(row[1].upper()) # ID único en Columna 2
+            if len(row) >= 2 and row[1]: # Columna B es el ID único
+                registros_viejos.add(row[1].strip().upper())
     
     return data, res_sheet, registros_viejos
 
@@ -54,29 +59,37 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     row = data_input.iloc[0] if is_flyer else data_input
     
     tipo = row['Tipo de diseño']
-    formato = str(row['Formato']).upper()
+    formato = str(row['Formato']).upper().strip()
     path_fonts = "TIPOGRAFIA/LC"
     path_fondos = f"FONDOS/LC/{tipo}"
     
     txt_color = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
-    # Colores Hexadecimales solicitados (#FED700 y #0A063C)
     border_color = (254, 215, 0) if color_version == "AMARILLO" else (10, 6, 60)
     
-    ext = ".png" if formato == "FLYER" else ".jpg"
-    nombre_fondo = f"LC - {tipo} - {formato} FONDO {color_version}{ext}"
+    # Búsqueda flexible de fondos (PNG o JPG)
+    base_name = f"LC - {tipo} - {formato}"
     if formato == "FLYER":
-        nombre_fondo = f"LC - {tipo} - FLYER {color_version}.png"
-
-    full_path_fondo = next((os.path.join(path_fondos, n) for n in [nombre_fondo, nombre_fondo.replace(".png", ".jpg")] if os.path.exists(os.path.join(path_fondos, n))), None)
-    if not full_path_fondo: return None
+        base_name = f"LC - {tipo} - FLYER"
+    
+    exts = [".png", ".jpg", ".PNG", ".JPG"]
+    full_path_fondo = None
+    for ex in exts:
+        test_path = os.path.join(path_fondos, f"{base_name} {color_version}{ex}")
+        if os.path.exists(test_path):
+            full_path_fondo = test_path
+            break
+    
+    if not full_path_fondo:
+        print(f"Fondo no encontrado: {base_name} {color_version}")
+        return None
 
     img = Image.open(full_path_fondo).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    # --- CARGA DE FUENTES (HurmeGeometricSans1) ---
+    # --- FUENTES (HurmeGeometricSans1) ---
     try:
-        f_marca = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 45) # Mayor notoriedad
-        f_prod = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20) # Reducido
+        f_marca = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 45)
+        f_prod = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20)
         f_precio_val = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 75)
         f_precio_sim = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 35)
         f_sku = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
@@ -87,60 +100,46 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
     if formato == "FLYER":
         try:
-            # 1. Fecha Alineada a la Izquierda (Bajo el texto del título)
+            # 1. Fecha a la Izquierda
             fecha_txt = str(row['Fecha_disponibilidad_flyer']).upper()
             w_f = draw.textlength(fecha_txt, font=f_fecha)
-            # Dibujar etiqueta de fecha centrada a la izquierda (x=70)
             draw.rounded_rectangle([70, 235, 70 + w_f + 40, 290], radius=12, outline=border_color, width=4)
             draw.text((70 + (w_f + 40)//2, 263), fecha_txt, font=f_fecha, fill=border_color, anchor="mm")
 
-            # 2. Cuadrícula adaptable (Máx 8)
+            # 2. Cuadrícula Adaptable
             num_prod = len(data_input)
-            # box_h dinámico para no salirse de los márgenes blancos
             box_h = 335 if num_prod > 4 else 460
-            start_y = 330 # Bajado para evitar choque con el cabezal
+            start_y = 335 
             
             for i, (idx, p_row) in enumerate(data_input.iterrows()):
                 if i >= 8: break
                 col, f_i = i % 2, i // 2
                 xp, yp = 60 + (col * 500), start_y + (f_i * (box_h + 15))
-
-                # Cuadro de producto con borde dinámico
                 draw.rounded_rectangle([xp, yp, xp+460, yp+box_h], radius=15, fill=(255,255,255), outline=border_color, width=2)
                 
                 p_res = requests.get(p_row['Foto del producto calado'], timeout=10)
                 p_img = quitar_fondo_blanco(Image.open(BytesIO(p_res.content)))
                 p_img.thumbnail((box_h-140, box_h-170))
-                img.paste(p_img, (int(xp + (460-p_img.width)//2), int(yp + 15)), p_img)
+                img.paste(p_img, (int(xp + (460-p_img.width)//2), int(yp + 20)), p_img)
 
                 cl, cr = xp + 115, xp + 345
                 draw.text((cl, yp+box_h-100), p_row['Marca'], font=f_marca, fill=(0,0,0), anchor="mm")
-                
                 ny = yp + box_h - 60
                 for line in textwrap.wrap(p_row['Nombre del producto'], width=18)[:2]:
                     draw.text((cl, ny), line, font=f_prod, fill=(0,0,0), anchor="mm"); ny += 25
                 
-                # Precio compuesto (S/ pequeño + Valor grande)
                 p_str = str(p_row['Precio desc'])
                 w_s = draw.textlength("S/", font=f_precio_sim)
-                w_v = draw.textlength(p_str, font=f_precio_val)
-                px = cr - (w_s + w_v + 5)//2
+                px = cr - (w_s + draw.textlength(p_str, font=f_precio_val) + 5)//2
                 draw.text((px, yp+box_h-75), "S/", font=f_precio_sim, fill=(0,0,0), anchor="lm")
                 draw.text((px + w_s + 5, yp+box_h-75), p_str, font=f_precio_val, fill=(0,0,0), anchor="lm")
-                
-                # SKU separado del precio
                 draw.text((cr, yp+box_h-22), str(p_row['SKU']), font=f_sku, fill=(100,100,100), anchor="mm")
 
-            # 3. Legales con márgenes laterales
-            wrapped_leg = textwrap.fill("CONDICIONES GENERALES: " + str(row['Legales']), width=115)
-            draw.text((65, 1845), wrapped_leg, font=f_leg_reg, fill=txt_color)
-
+            draw.text((65, 1845), textwrap.fill("CONDICIONES GENERALES: " + str(row['Legales']), width=115), font=f_leg_reg, fill=txt_color)
         except Exception as e:
-            print(f"Error en FLYER: {e}")
-            return None
+            print(f"Error en FLYER: {e}"); return None
 
     else:
-        # DISPLAY, STORY, PPL
         try:
             p_res = requests.get(row['Foto del producto calado'], timeout=10)
             p_img = quitar_fondo_blanco(Image.open(BytesIO(p_res.content)))
@@ -189,7 +188,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((px + 50, 815), p_str, font=f_precio_val, fill=txt_color, anchor="mm")
                 draw.text((735, 890), str(row['SKU']), font=f_sku, fill=txt_color, anchor="mm")
                 draw.text((45, 945), textwrap.fill("CONDICIONES GENERALES: " + str(row['Legales']), width=105), font=f_leg_reg, fill=txt_color)
-        except: return None
+        except Exception as e:
+            print(f"Error en individual: {e}"); return None
 
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{color_version}.jpg"
     img.save(f"output/{fname}", quality=95)
@@ -202,18 +202,18 @@ h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 
 # 1. Procesar Individuales
 for idx, row in data.iterrows():
-    if str(row['Formato']).upper() == "FLYER": continue
+    f_val = str(row['Formato']).upper().strip()
+    if f_val == "FLYER" or f_val == "": continue
     for c in (["AMARILLO", "AZUL"] if row['Tipo de diseño'] == "DSCTOS POWER" else ["AMARILLO"]):
-        # ID ÚNICO PARA NO CONFUNDIR EN RESULTADOS
-        llave = f"{row['SKU']}_{row['Formato']}_{c}".upper()
+        llave = f"{row['SKU']}_{f_val}_{c}".upper()
         if llave not in registros_viejos:
             url = generar_diseno(row, c)
-            if url: res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], row['Formato'], c, url])
+            if url: res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_val, c, url])
         else:
-            print(f"Skipping {llave}: Already in Results.")
+            print(f"Saltando {llave}: Ya existe.")
 
 # 2. Procesar Flyers
-fly_g = data[data['Formato'].astype(str).str.upper() == "FLYER"]
+fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
 for id_f, group in fly_g.groupby('ID_Flyer'):
     if str(id_f) in ["0", "0.0", ""]: continue
     for c in (["AZUL", "AMARILLO"] if group.iloc[0]['Tipo de diseño'] == "DSCTOS POWER" else ["AMARILLO"]):
@@ -222,4 +222,4 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
             url = generar_diseno(group, c)
             if url: res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
         else:
-            print(f"Skipping {llave}: Already in Results.")
+            print(f"Saltando {llave}: Ya existe.")
