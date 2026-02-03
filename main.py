@@ -14,22 +14,15 @@ USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
+# Función desactivada por pedido del usuario (ahora se usan PNGs transparentes)
 def quitar_fondo_blanco(img):
-    img = img.convert("RGBA")
-    datos = img.getdata()
-    nueva_data = []
-    for item in datos:
-        if item[0] > 245 and item[1] > 245 and item[2] > 245:
-            nueva_data.append((255, 255, 255, 0))
-        else:
-            nueva_data.append(item)
-    img.putdata(nueva_data)
     return img
 
 def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill):
-    """Dibuja texto con alineación justificada (bordes rectos)."""
-    # Aumentamos ligeramente el ancho de caracteres para reducir espacios excesivos
-    wrap_width = 120 if (x_end - x_start) > 900 else 95
+    """Dibuja texto justificado con espaciado entre palabras optimizado (más junto)"""
+    # Aumentamos el width para que entren más palabras por línea y se reduzcan los huecos
+    available_w = x_end - x_start
+    wrap_width = 135 if available_w > 900 else 115
     lines = textwrap.wrap(text, width=wrap_width)
     y = y_start
     for i, line in enumerate(lines):
@@ -38,7 +31,7 @@ def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill):
             draw.text((x_start, y), line, font=font, fill=fill)
         else:
             total_w = sum(draw.textlength(w, font=font) for w in words)
-            space_width = ((x_end - x_start) - total_w) / (len(words) - 1)
+            space_width = (available_w - total_w) / (len(words) - 1)
             curr_x = x_start
             for word in words:
                 draw.text((curr_x, y), word, font=font, fill=fill)
@@ -73,11 +66,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     img = Image.open(full_p).convert("RGB"); draw = ImageDraw.Draw(img)
 
     try:
-        # Ajuste de Tamaños (+2 para PPL/STORY)
         is_big = formato in ["PPL", "STORY"]
-        f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 40 if is_big else 35)
+        f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 41 if is_big else 36)
         f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 22 if is_big else 18)
-        f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 80 if is_big else 75)
+        f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 82 if is_big else 75)
         f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 34 if is_big else 30)
         f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 26 if is_big else 24)
         f_s_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 11)
@@ -95,35 +87,32 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             if i >= 8: break
             xp, yp = 65+(i%2)*495, 345+(i//2)*(box_h+12)
             draw.rounded_rectangle([xp, yp, xp+455, yp+box_h], radius=15, fill=(255,255,255), outline=border_c, width=2)
-            pi = quitar_fondo_blanco(Image.open(BytesIO(requests.get(p['Foto del producto calado']).content)))
-            pi.thumbnail((box_h-145, box_h-175)); img.paste(pi, (int(xp+(455-pi.width)//2), int(yp+15)), pi)
+            pi = Image.open(BytesIO(requests.get(p['Foto del producto calado']).content)).convert("RGBA")
+            pi.thumbnail((box_h-145, box_h-175)); img.paste(pi, (int(xp+(455-pi.width)//2), int(yp+20)), pi)
             cl, cr = xp+115, xp+345
-            # Marca Reducida un poco
-            f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 30 if len(p['Marca']) < 12 else 22)
+            f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 28 if len(p['Marca']) < 12 else 21)
             draw.text((cl, yp+box_h-100), p['Marca'], font=f_m_fly, fill=(0,0,0), anchor="mm")
             ny = yp+box_h-65
             for ln in textwrap.wrap(p['Nombre del producto'], width=18)[:2]:
                 draw.text((cl, ny), ln, font=f_p, fill=(0,0,0), anchor="mm"); ny += 20
             p_val = str(p['Precio desc'])
-            px = cr - (draw.textlength("S/", font=f_ps) + draw.textlength(p_val, font=f_pv) + 8)//2
+            px = cr - (draw.textlength("S/", font=f_ps) + draw.textlength(p_val, font=f_pv) + 12)//2
             draw.text((px, yp+box_h-75), "S/", font=f_ps, fill=(0,0,0), anchor="lm")
-            draw.text((px + draw.textlength("S/", font=f_ps) + 8, yp+box_h-75), p_val, font=f_pv, fill=(0,0,0), anchor="lm")
+            draw.text((px + draw.textlength("S/", font=f_ps) + 12, yp+box_h-75), p_val, font=f_pv, fill=(0,0,0), anchor="lm")
             draw.text((cr, yp+box_h-20), str(p['SKU']), font=f_s_fly, fill=(110,110,110), anchor="mm")
-        # Legales Flyer subidos 2px
-        draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 1843, 65, 1015, txt_c)
+        draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 1840, 65, 1015, txt_c)
 
     else:
-        pi = quitar_fondo_blanco(Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)))
+        pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         if formato == "DISPLAY":
             pi.thumbnail((440, 440)); img.paste(pi, (530, 45), pi); cx, ny = 265, 235
             draw.text((cx, 185), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
             for l in textwrap.wrap(row['Nombre del producto'], width=22):
                 draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 25
             p_v = str(row['Precio desc'])
-            # Contingencia 4 dígitos
-            px = cx - (draw.textlength("S/ ", font=f_ps) + draw.textlength(p_v, font=f_pv) + 10)//2
+            px = cx - (draw.textlength("S/ ", font=f_ps) + draw.textlength(p_v, font=f_pv) + 12)//2
             draw.text((px, ny+45), "S/ ", font=f_ps, fill=txt_c, anchor="lm")
-            draw.text((px+draw.textlength("S/ ", font=f_ps)+10, ny+45), p_v, font=f_pv, fill=txt_c, anchor="lm")
+            draw.text((px+draw.textlength("S/ ", font=f_ps)+12, ny+45), p_v, font=f_pv, fill=txt_c, anchor="lm")
             draw.text((cx, ny+90), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
             draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 455, 40, 500, txt_c)
         elif formato == "STORY":
@@ -132,7 +121,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             for l in textwrap.wrap(row['Nombre del producto'], width=20):
                 draw.text((270, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 30
             p_v = str(row['Precio desc'])
-            # Separación forzada para 4 dígitos
             px = 810 - (draw.textlength("S/ ", font=f_ps) + draw.textlength(p_v, font=f_pv) + 15)//2
             draw.text((px, 1475), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
             draw.text((px + draw.textlength("S/ ", font=f_ps) + 65, 1475), p_v, font=f_pv, fill=txt_c, anchor="mm")
@@ -144,7 +132,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             for l in textwrap.wrap(row['Nombre del producto'], width=22):
                 draw.text((275, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 28
             p_v = str(row['Precio desc'])
-            # Separación forzada para 4 dígitos
             px = 735 - (draw.textlength("S/ ", font=f_ps) + draw.textlength(p_v, font=f_pv) + 15)//2
             draw.text((px, 810), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
             draw.text((px + draw.textlength("S/ ", font=f_ps) + 65, 810), p_v, font=f_pv, fill=txt_c, anchor="mm")
