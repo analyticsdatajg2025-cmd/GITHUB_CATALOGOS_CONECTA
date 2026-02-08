@@ -36,7 +36,7 @@ def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_sp
         y += font.getbbox("Ay")[3] + line_spacing
 
 def draw_dotted_line(draw, start, end, fill, width=2, gap=10):
-    """Líneas entrecortadas para Flyers de EFE."""
+    """Líneas entrecortadas dinámicas para EFE."""
     curr_x, curr_y = start
     dest_x, dest_y = end
     dx, dy = dest_x - curr_x, dest_y - curr_y
@@ -74,7 +74,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     row = data_input.iloc[0] if is_flyer else data_input
     tienda = str(row.get('Tienda', 'LC')).strip().upper()
     tipo, formato = str(row['Tipo de diseño']).strip(), str(row['Formato']).upper().strip()
-    
     path_fonts, path_fondos = f"TIPOGRAFIA/{tienda}", f"FONDOS/{tienda}/{tipo}"
     txt_c = (255,255,255) if tienda == "EFE" else ((0,0,0) if color_version == "AMARILLO" else (255,255,255))
     
@@ -92,7 +91,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_s_ind = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 18)
             f_l = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 11)
             f_f = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 24)
-        else: # LC 100% INTACTO
+        else: # LA CURACAO (100% INTACTO)
             if formato == "STORY":
                 f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 54)
                 f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 32)
@@ -119,7 +118,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             if "EFERTON" in tipo.upper():
                 draw.rounded_rectangle([540-wf//2-40, 235, 540+wf//2+40, 285], radius=12, outline=(255,255,255), width=3)
             draw.text((540, 260), f_txt, font=f_f, fill=(255,255,255), anchor="mm")
-        else: # LC INTACTO
+        else: # LC
             wf = draw.textlength(f_txt, font=f_f)
             draw.rounded_rectangle([75, 235, 75+wf+35, 285], radius=10, outline=(0,0,0) if color_version=="AMARILLO" else (255,255,255), width=3)
             draw.text((75+(wf+35)//2, 260), f_txt, font=f_f, fill=(0,0,0) if color_version=="AMARILLO" else (255,255,255), anchor="mm")
@@ -132,7 +131,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 line_c = "#00ACDE" if "EFERTON" in tipo.upper() else "#0A74DA"
                 if i % 2 == 0: draw_dotted_line(draw, (xp+475, yp+10), (xp+475, yp+box_h-10), line_c)
                 if i < 6: draw_dotted_line(draw, (xp+10, yp+box_h+6), (xp+445, yp+box_h+6), line_c)
-            else: # LC BORDES
+            else: # LC
                 draw.rounded_rectangle([xp, yp, xp+455, yp+box_h], radius=15, fill=(255,255,255), outline=(254, 215, 0), width=2)
             
             pi = Image.open(BytesIO(requests.get(p['Foto del producto calado']).content)).convert("RGBA")
@@ -146,7 +145,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     draw_efe_preciador(draw, xp+350, yp+box_h-65, "S/", str(p['Precio desc']), f_ps, f_pv)
                 else:
                     draw.text((xp+350, yp+box_h-65), f"S/ {p['Precio desc']}", font=f_pv, fill="#FFA002", anchor="mm")
-            else: # LC TEXTOS
+            else: # LC
                 draw.text((xp+115, yp+box_h-100), p['Marca'], font=f_m, fill=(0,0,0), anchor="mm")
                 ny = yp+box_h-65
                 for ln in textwrap.wrap(p['Nombre del producto'], width=18)[:2]:
@@ -160,19 +159,20 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     else:
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         if formato == "PPL":
-            if tienda == "EFE" and "EFERTON" in tipo.upper():
-                pi.thumbnail((610, 610)); img.paste(pi, (500-pi.width//2, 450-pi.height//2), pi)
-                ay = 780
-                draw.text((180, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="mm")
-                draw.text((500, ay), row['Nombre del producto'], font=f_p, fill=(255,255,255), anchor="mm")
-                draw.text((500, ay+40), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mm")
-                draw_efe_preciador(draw, 820, ay, "S/", str(row['Precio desc']), f_ps, f_pv)
-            elif tienda == "EFE" and "IRRESISTIBLE" in tipo.upper():
-                pi.thumbnail((740, 740)); img.paste(pi, (600-pi.width//2, 430-pi.height//2), pi)
-                draw.text((100, 750), row['Marca'], font=f_m, fill=(255,255,255), anchor="lm")
-                draw.text((100, 800), row['Nombre del producto'], font=f_p, fill=(255,255,255), anchor="lm")
-                draw.text((100, 840), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="lm")
-                draw.text((100, 910), f"S/ {row['Precio desc']}", font=f_pv, fill=(255,255,255), anchor="lm")
+            if tienda == "EFE":
+                # --- AJUSTE PPL EFE: Bajado a 485 para respiro superior ---
+                pi.thumbnail((590, 590)); img.paste(pi, (500-pi.width//2, 485-pi.height//2), pi)
+                ay = 780 # Nivelación horizontal
+                if "EFERTON" in tipo.upper():
+                    draw.text((180, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="mm")
+                    draw.text((500, ay), row['Nombre del producto'], font=f_p, fill=(255,255,255), anchor="mm")
+                    draw.text((500, ay+40), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mm")
+                    draw_efe_preciador(draw, 820, ay, "S/", str(row['Precio desc']), f_ps, f_pv)
+                else: # IRRESISTIBLE EFE
+                    draw.text((100, 750), row['Marca'], font=f_m, fill=(255,255,255), anchor="lm")
+                    draw.text((100, 800), row['Nombre del producto'], font=f_p, fill=(255,255,255), anchor="lm")
+                    draw.text((100, 840), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="lm")
+                    draw.text((100, 910), f"S/ {row['Precio desc']}", font=f_pv, fill=(255,255,255), anchor="lm")
             else: # LC PPL INTACTO
                 pi.thumbnail((610, 610)); img.paste(pi, (500-pi.width//2, 475-pi.height//2), pi)
                 draw.text((275, 780), row['Marca'], font=f_m, fill=txt_c, anchor="mm")
@@ -233,23 +233,39 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{tienda}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
 
-# --- EJECUCIÓN ---
+# --- EJECUCIÓN 7 COLUMNAS ---
 data, res_sheet, viejos = get_sheets_data(); os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+
 for idx, row in data.iterrows():
     f_v = str(row['Formato']).upper().strip()
     if f_v in ["FLYER", "", "0"]: continue
     tienda = str(row.get('Tienda', 'LC')).strip().upper()
-    llave = f"{row['SKU']}_{f_v}_{tienda}".upper()
-    if llave not in viejos:
-        url = generar_diseno(row)
-        if url: res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, tienda, url])
+    tipo = str(row['Tipo de diseño']).strip()
+    
+    colores = ["AMARILLO", "AZUL"] if (tienda == "LC" and tipo == "DSCTOS POWER") else ["AMARILLO"]
+    if tienda == "EFE": colores = ["EFE"]
+
+    for c in colores:
+        llave = f"{row['SKU']}_{f_v}_{tienda}_{c}".upper()
+        if llave not in viejos:
+            url = generar_diseno(row, color_version=c)
+            if url: # Fecha | ID | Tienda | Diseño | Formato | Color | Link
+                res_sheet.append_row([h_lima, llave, tienda, tipo, f_v, c, url])
 
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
 for id_f, group in fly_g.groupby('ID_Flyer'):
     if str(id_f) in ["0", "0.0", ""]: continue
-    tienda = str(group.iloc[0].get('Tienda', 'LC')).strip().upper()
-    llave = f"{id_f}_FLYER_{tienda}".upper()
-    if llave not in viejos:
-        url = generar_diseno(group)
-        if url: res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", tienda, url])
+    p_reg = group.iloc[0]
+    tienda = str(p_reg.get('Tienda', 'LC')).strip().upper()
+    tipo = str(p_reg['Tipo de diseño']).strip()
+    
+    colores_f = ["AMARILLO", "AZUL"] if (tienda == "LC" and tipo == "DSCTOS POWER") else ["AMARILLO"]
+    if tienda == "EFE": colores_f = ["EFE"]
+
+    for cf in colores_f:
+        llave = f"{id_f}_FLYER_{tienda}_{cf}".upper()
+        if llave not in viejos:
+            url = generar_diseno(group, color_version=cf)
+            if url: # Fecha | ID | Tienda | Diseño | Formato | Color | Link
+                res_sheet.append_row([h_lima, llave, tienda, tipo, "FLYER", cf, url])
