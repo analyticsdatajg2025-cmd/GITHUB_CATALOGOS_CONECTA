@@ -14,23 +14,14 @@ USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
-def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing=2):
-    """Dibuja texto legal compacto con interlineado de 2px (Global LC/EFE)."""
+def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing=1):
+    """Dibuja texto legal ultra-compacto (Size-1, Spacing 1)."""
     available_w = x_end - x_start
-    wrap_width = 145 if available_w > 900 else 110
+    wrap_width = 115 if available_w < 500 else 145
     lines = textwrap.wrap(text, width=wrap_width)
     y = y_start
-    for i, line in enumerate(lines):
-        words = line.split()
-        if i == len(lines) - 1 or len(words) <= 1:
-            draw.text((x_start, y), line, font=font, fill=fill)
-        else:
-            total_w = sum(draw.textlength(w, font=font) for w in words)
-            space_width = (available_w - total_w) / (len(words) - 1)
-            curr_x = x_start
-            for word in words:
-                draw.text((curr_x, y), word, font=font, fill=fill)
-                curr_x += draw.textlength(word, font=font) + space_width
+    for line in lines:
+        draw.text((x_start, y), line, font=font, fill=fill)
         y += font.getbbox("Ay")[3] + line_spacing
 
 def draw_dotted_line(draw, start, end, fill, width=2, gap=8):
@@ -46,15 +37,17 @@ def draw_dotted_line(draw, start, end, fill, width=2, gap=8):
         draw.line([s, e], fill=fill, width=width)
 
 def draw_efe_preciador(draw, x_center, y_center, text_s, text_price, f_ps, f_pv, scale=1.0):
-    """Preciador Inteligente Dinámico: Soporta de 2 a 6 cifras sin errores."""
+    """Preciador Adaptativo: S/ menor, dígitos compactos."""
+    # Cálculo de anchos reales
     sym_w = draw.textlength(text_s, font=f_ps)
     num_w = draw.textlength(text_price, font=f_pv)
-    gap = 15
+    gap = 8 # Espaciado reducido entre S/ y Número
     full_w = sym_w + num_w + gap
-    h = int(115 * scale)
-    # Fondo dinámico según ancho total medido
-    draw.rounded_rectangle([x_center - full_w//2 - 25, y_center - h//2, x_center + full_w//2 + 25, y_center + h//2], radius=18, fill="#FFA002")
-    # Posicionamiento exacto S/ y Monto
+    
+    h = int(110 * scale)
+    # El rectángulo se adapta al ancho real del precio
+    draw.rounded_rectangle([x_center - full_w//2 - 20, y_center - h//2, x_center + full_w//2 + 20, y_center + h//2], radius=15, fill="#FFA002")
+    
     tx = x_center - full_w//2
     draw.text((tx, y_center), text_s, font=f_ps, fill=(255,255,255), anchor="lm")
     draw.text((tx + sym_w + gap, y_center), text_price, font=f_pv, fill=(255,255,255), anchor="lm")
@@ -79,24 +72,25 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     tipo = str(row['Tipo de diseño']).strip().upper()
     formato = str(row['Formato']).upper().strip()
     path_fonts, path_fondos = f"TIPOGRAFIA/{tienda}", f"FONDOS/{tienda}/{tipo}"
-    txt_c = (255,255,255) if tienda == "EFE" else ((0,0,0) if color_version == "AMARILLO" else (255,255,255))
+    txt_c = (255,255,255) if tienda == "EFE" else (0,0,0)
 
-    # Búsqueda de Fondos Multi-patrón (Busca con/sin REPOWER)
-    f_pats = [f"{tienda} - {tipo} - {formato}", f"{tienda} - REPOWER {tipo} - {formato}", f"{tipo} - {formato}"]
-    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in f_pats for e in [".jpg", ".JPG", ".png", ".PNG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
+    f_names = [f"{tienda} - {tipo} - {formato}", f"{tienda} - REPOWER {tipo} - {formato}"]
+    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in f_names for e in [".jpg", ".png", ".JPG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
     if not full_p: return None
     img = Image.open(full_p).convert("RGB"); draw = ImageDraw.Draw(img)
 
     try:
         if tienda == "EFE":
-            f_m = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 32 if formato == "FLYER" else 42)
-            f_p = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 20 if formato == "FLYER" else 28)
-            f_pv = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 70 if formato == "FLYER" else 100)
+            # Ajuste STORY (+2px), Legales (-1px)
+            f_m = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 44 if formato == "STORY" else 32)
+            f_p = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30 if formato == "STORY" else 20)
+            # PPL: Precio -1px (99)
+            f_pv = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 99 if formato == "PPL" else (70 if formato == "FLYER" else 100))
             f_ps = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 30 if formato == "FLYER" else 40)
-            f_s_ind = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 16)
-            f_l = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 10)
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 18 if formato == "STORY" else 15)
+            f_l = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 9) # Legales -1px
             f_f = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26)
-        else: # LA CURACAO
+        else: # LC INTACTO
             if formato == "STORY":
                 f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 54); f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 32)
                 f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 105); f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 42)
@@ -131,16 +125,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
                 if i % 2 == 0: draw_dotted_line(draw, (xp+475, yp+20), (xp+475, yp+box_h-20), line_c)
                 if i < 6: draw_dotted_line(draw, (xp+20, yp+box_h+6), (xp+435, yp+box_h+6), line_c)
-            else: draw.rounded_rectangle([xp, yp, xp+455, yp+box_h], radius=15, fill=(255,255,255), outline=(254, 215, 0), width=2)
-            
-            pi = Image.open(BytesIO(requests.get(p['Foto del producto calado']).content)).convert("RGBA")
-            pi.thumbnail((box_h-120, box_h-140)); img.paste(pi, (int(xp+(455-pi.width)//2), int(yp+10)), pi)
-            
-            if tienda == "EFE":
-                cx_l = xp + 120
+                
+                cx_l = xp + 125 # Columnas Flyer EFE (Max 2 líneas)
                 draw.text((cx_l, yp+box_h-115), p['Marca'], font=f_m, fill=(0,0,0), anchor="mm")
                 ny = yp+box_h-90
-                for ln in textwrap.wrap(p['Nombre del producto'], width=12):
+                for ln in textwrap.wrap(p['Nombre del producto'], width=18)[:2]:
                     draw.text((cx_l, ny), ln, font=f_p, fill=(0,0,0), anchor="mm"); ny += 24
                 draw.text((cx_l, ny+5), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
                 if "EFERTON" in tipo: draw_efe_preciador(draw, xp+345, yp+box_h-75, "S/", str(p['Precio desc']), f_ps, f_pv, scale=0.65)
@@ -157,23 +146,29 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 1835, 65, 1015, (255,255,255) if tienda=="EFE" else txt_c)
 
     else:
-        pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        pi = Image.open(BytesIO(requests.get(row['Foto del producto calado'], headers=headers).content)).convert("RGBA")
         if formato == "PPL":
             if tienda == "EFE":
-                pi.thumbnail((580, 580)); img.paste(pi, (500-pi.width//2, 500-pi.height//2), pi)
-                ay = 830
                 if "EFERTON" in tipo:
+                    pi.thumbnail((580, 580)); img.paste(pi, (500-pi.width//2, 505-pi.height//2), pi) # -5px abajo
+                    ay = 830
                     draw.text((160, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="mm")
                     ny = ay - 15
                     for l in textwrap.wrap(row['Nombre del producto'], width=15):
                         draw.text((500, ny), l, font=f_p, fill=(255,255,255), anchor="mm"); ny += 32
                     draw.text((500, ny+5), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mm")
                     draw_efe_preciador(draw, 840, ay, "S/", str(row['Precio desc']), f_ps, f_pv, scale=0.9)
-                else: # IRRESISTIBLE EFE
-                    draw.text((100, 800), row['Marca'], font=f_m, fill=(255,255,255), anchor="lm")
-                    draw.text((100, 845), row['Nombre del producto'], font=f_p, fill=(255,255,255), anchor="lm")
-                    draw.text((100, 885), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="lm")
-                    draw.text((100, 940), f"S/ {row['Precio desc']}", font=f_pv, fill=(255,255,255), anchor="lm")
+                else: # PI PPL (+10px right, +10px down, +3px size)
+                    pi.thumbnail((583, 583)); img.paste(pi, (510-pi.width//2, 510-pi.height//2), pi)
+                    ay = 790 # Textos subidos para no tapar
+                    draw.text((100, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="lm")
+                    ny = ay + 45
+                    for l in textwrap.wrap(row['Nombre del producto'], width=18)[:2]:
+                        draw.text((100, ny), l, font=f_p, fill=(255,255,255), anchor="lm"); ny += 32
+                    draw.text((100, ny + 5), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="lm")
+                    draw.text((100, ny + 60), f"S/ {row['Precio desc']}", font=f_pv, fill=(255,255,255), anchor="lm")
+                    draw_justified_text(draw, str(row['Legales']), f_l, 950, 50, 950, (255,255,255)) # Legales +5px abajo
             else: # LC PPL
                 pi.thumbnail((610, 610)); img.paste(pi, (500-pi.width//2, 475-pi.height//2), pi)
                 draw.text((275, 780), row['Marca'], font=f_m, fill=txt_c, anchor="mm")
@@ -184,20 +179,22 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((px, 780), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
                 draw.text((px+draw.textlength("S/ ", font=f_ps)+80, 780), str(row['Precio desc']), font=f_pv, fill=txt_c, anchor="mm")
                 draw.text((735, 780+60), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm")
-            draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 945, 50, 950, (255,255,255) if tienda=="EFE" else txt_c)
+                draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 945, 50, 950, txt_c)
 
         elif formato == "STORY":
-            pi.thumbnail((900, 900)); img.paste(pi, (540-pi.width//2, 620), pi)
-            ay = 1480
             if tienda == "EFE":
+                pi.thumbnail((900, 900)); img.paste(pi, (540-pi.width//2, 630), pi) # Ajuste armonía vertical
+                ay = 1500 # Textos bajados
                 draw.text((270, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="mm")
                 ny = ay + 70
-                for l in textwrap.wrap(row['Nombre del producto'], width=16):
+                for l in textwrap.wrap(row['Nombre del producto'], width=25)[:2]:
                     draw.text((270, ny), l, font=f_p, fill=(255,255,255), anchor="mm"); ny += 40
                 draw.text((270, ny+5), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mm")
-                if "EFERTON" in tipo: draw_efe_preciador(draw, 810, ay+15, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.1)
-                else: draw.text((810, ay+15), f"S/ {row['Precio desc']}", font=f_pv, fill=(255,255,255), anchor="mm")
+                if "EFERTON" in tipo: draw_efe_preciador(draw, 810, ay+20, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.1)
+                else: draw.text((810, ay+20), f"S/ {row['Precio desc']}", font=f_pv, fill=(255,255,255), anchor="mm")
             else: # LC STORY
+                pi.thumbnail((900, 900)); img.paste(pi, (540-pi.width//2, 620), pi)
+                ay = 1480
                 draw.text((270, ay-50), row['Marca'], font=f_m, fill=txt_c, anchor="mm")
                 ny = ay + 15
                 for l in textwrap.wrap(row['Nombre del producto'], width=20):
@@ -209,15 +206,19 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw_justified_text(draw, "CONDICIONES GENERALES: "+str(row['Legales']), f_l, 1835, 65, 1015, (255,255,255) if tienda=="EFE" else txt_c)
 
         elif formato == "DISPLAY":
-            pi.thumbnail((400, 400)); img.paste(pi, (530, 70), pi); cx = 265
             if tienda == "EFE":
+                pi.thumbnail((400, 400))
+                if "IRRESISTIBLE" in tipo: img.paste(pi, (522, 70), pi) # -8px izquierda
+                else: img.paste(pi, (530, 70), pi)
+                cx = 265
                 draw.text((cx, 220), row['Marca'], font=f_m, fill=(255,255,255), anchor="mt")
                 ny = 265
-                for l in textwrap.wrap(row['Nombre del producto'], width=20):
+                # Wrap ajustado para forzar 2 líneas (width=25)
+                for l in textwrap.wrap(row['Nombre del producto'], width=25)[:2]:
                     draw.text((cx, ny), l, font=f_p, fill=(255,255,255), anchor="mt"); ny += 32
                 draw.text((cx, ny+5), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mt")
-                if "EFERTON" in tipo: draw_efe_preciador(draw, cx, 410, "S/", str(row['Precio desc']), f_ps, f_pv, scale=0.7)
-                else: draw.text((cx, 410), f"S/ {row['Precio desc']}", font=f_pv, fill=(255,255,255), anchor="mm")
+                if "EFERTON" in tipo: draw_efe_preciador(draw, cx, 405, "S/", str(row['Precio desc']), f_ps, f_pv, scale=0.6)
+                else: draw.text((cx, 405), f"S/ {row['Precio desc']}", font=f_pv, fill=(255,255,255), anchor="mm")
             else: # LC DISPLAY
                 draw.text((cx, 185), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
                 ny = 235
@@ -227,8 +228,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((px, ny+45), "S/ ", font=f_ps, fill=txt_c, anchor="lm")
                 draw.text((px+draw.textlength("S/ ", font=f_ps)+15, ny+45), str(row['Precio desc']), font=f_pv, fill=txt_c, anchor="lm")
                 draw.text((cx, ny+90), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
-            leg_txt = textwrap.fill("CONDICIONES GENERALES: "+str(row['Legales']), width=115)
-            draw.multiline_text((40, 450), leg_txt, font=f_l, fill=(255,255,255) if tienda=="EFE" else txt_c, spacing=3)
+            draw_justified_text(draw, str(row['Legales']), f_l, 450, 40, 480, (255,255,255) if tienda=="EFE" else txt_c)
 
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{tienda}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
