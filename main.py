@@ -135,38 +135,48 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         draw.text((540, 260), f_txt, font=f_f, fill=(255,255,255), anchor="mm")
         
         num_prod = len(data_input)
-        # Ajustamos el tamaño de cajas e imágenes según cantidad de productos
+        # 1. Definimos dimensiones según la cantidad de productos
         if num_prod > 6:
             box_h, img_size, preciador_scale = 330, 250, 0.5
         else:
-            box_h, img_size, preciador_scale = 450, 330, 0.6 # Imagen más grande para 6 productos
+            box_h, img_size, preciador_scale = 450, 330, 0.6 # Más grande para 6 productos
             
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
+            # xp y yp calculan la rejilla
             xp, yp = 65+(i%2)*495, 345+(i//2)*(box_h+12)
             
             line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
             
-            # LÍNEA VERTICAL: Solo si hay un producto a la derecha en la misma fila
+            # LÍNEA VERTICAL: Solo si hay un producto a la derecha
             if i % 2 == 0 and (i + 1) < num_prod: 
                 draw_dotted_line(draw, (xp+475, yp+20), (xp+475, yp+box_h-20), line_c)
             
-            # LÍNEA HORIZONTAL (SUELO): Solo si hay productos en la fila de ABAJO
-            # Esto elimina la línea sobrante cuando solo hay 6 productos
+            # LÍNEA HORIZONTAL: Solo si hay una fila debajo (evita línea fantasma en 6 productos)
             if (i + 2) < num_prod: 
                 draw_dotted_line(draw, (xp+20, yp+box_h+6), (xp+435, yp+box_h+6), line_c)
 
+            # --- CORRECCIÓN DE IMAGEN ---
             try:
-                pi_res = requests.get(p['Foto del producto calado'], timeout=10)
-                pi_fly = Image.open(BytesIO(pi_res.content)).convert("RGBA")
-                # Usamos el img_size dinámico (330px para 6 productos)
-                pi_fly.thumbnail((img_size, img_size))
-                # Posición dinámica centrada verticalmente en el box_h correspondiente
-                img.paste(pi_fly, (xp + 240 - pi_fly.width//2, yp + (box_h//2.3) - pi_fly.height//2), pi_fly)
-            except: pass
+                # Usamos p.get para evitar errores si la columna cambia de nombre ligeramente
+                url_foto = p.get('Foto del producto calado') or p.get('Foto')
+                if url_foto:
+                    pi_res = requests.get(url_foto, timeout=10)
+                    pi_fly = Image.open(BytesIO(pi_res.content)).convert("RGBA")
+                    
+                    # Redimensionamos con el tamaño dinámico
+                    pi_fly.thumbnail((img_size, img_size))
+                    
+                    # Cálculo de posición CENTRADA (usando int() para asegurar que PIL lo acepte)
+                    x_pos = int(xp + 240 - pi_fly.width // 2)
+                    y_pos = int(yp + (box_h // 2.4) - pi_fly.height // 2)
+                    
+                    img.paste(pi_fly, (x_pos, y_pos), pi_fly)
+            except Exception as e:
+                print(f"Error en imagen {i}: {e}")
 
+            # --- TEXTOS POSICIONADOS RELATIVOS AL FINAL DE LA CAJA ---
             cx_l = xp + 125
-            # Ajuste de posición final (+4px abajo respecto al original)
             draw.text((cx_l, yp+box_h-113), p['Marca'], font=f_m, fill=(0,0,0), anchor="mm")
             draw.text((cx_l, yp+box_h-83), p['Nombre del producto'][:20], font=f_p, fill=(0,0,0), anchor="mm")
             draw.text((cx_l, yp+box_h-58), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
@@ -174,6 +184,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             if "EFERTON" in tipo: 
                 draw_efe_preciador(draw, xp+345, yp+box_h-75, "S/", str(p['Precio desc']), f_ps, f_pv, scale=preciador_scale, tracking=-2)
             else:
+                # Precio normal con S/ pequeño
                 w_s = draw.textlength("S/", font=f_ps)
                 draw.text((xp+305, yp+box_h-75), "S/", font=f_ps, fill="#FFA002", anchor="lm")
                 draw.text((xp+305 + w_s + 6, yp+box_h-75), str(p['Precio desc']), font=f_pv, fill="#FFA002", anchor="lm")
@@ -196,8 +207,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 ay = 830 
                 
                 # --- AJUSTE DE TAMAÑOS (Aumentados) ---
-                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 52) # Antes 45
-                f_p_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 38) # Antes 35
+                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 43) # Antes 45
+                f_p_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 34) # Antes 35
                 f_s_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22) # SKU nuevo, más grande
                 
                 # Dibujo de textos con las nuevas fuentes
@@ -252,8 +263,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
         # 3. DISPLAY
         elif formato == "DISPLAY":
-            pi.thumbnail((500, 500))
-            if "IRRESISTIBLE" in tipo: img.paste(pi, (480, 70), pi)
+            pi.thumbnail((520, 520))
+            if "IRRESISTIBLE" in tipo: img.paste(pi, (470, 70), pi)
             else: img.paste(pi, (480, 70), pi)
             cx = 260 # Centro del área de texto
             # Bajado +10px (220->230, 260->270, 290->300)
@@ -270,7 +281,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((start_x, 380), "S/", font=f_ps, fill=(255,255,255), anchor="lm")
                 draw.text((start_x + w_s + 10, 380), str(row['Precio desc']), font=f_pv, fill=(255,255,255), anchor="lm")
             # Legales Display: Márgenes 40 a 480 (Mitad del banner), force_justify=False para legibilidad
-            draw_justified_text(draw, str(row['Legales']), f_l, 480, 44, 500, (255,255,255), line_spacing_offset=-1, force_justify=True)
+            draw_justified_text(draw, str(row['Legales']), f_l, 465, 44, 510, (255,255,255), line_spacing_offset=-1, force_justify=False)
 
     # --- GUARDADO FINAL ---
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{tienda}.jpg"
