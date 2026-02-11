@@ -207,8 +207,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 ay = 830 
                 
                 # --- AJUSTE DE TAMAÑOS (Aumentados) ---
-                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 42) # Antes 45
-                f_p_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30) # Antes 35
+                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 40) # Antes 45
+                f_p_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 28) # Antes 35
                 f_s_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22) # SKU nuevo, más grande
                 
                 # Dibujo de textos con las nuevas fuentes
