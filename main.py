@@ -114,7 +114,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     try:
         p_size = 90; s_size = 35; l_size = 10
         if formato == "DISPLAY": 
-            p_size = 50; s_size = 20; l_size = 9 # l_size=9 es el aumento de 3pt solicitado
+            p_size = 50; s_size = 20; l_size = 7 # l_size=9 es el aumento de 3pt solicitado
         elif formato == "STORY": 
             p_size = 100; s_size = 40
         elif formato == "FLYER":
