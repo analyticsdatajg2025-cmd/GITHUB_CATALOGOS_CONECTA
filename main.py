@@ -207,8 +207,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 ay = 830 
                 
                 # --- AJUSTE DE TAMAÑOS (Aumentados) ---
-                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 43) # Antes 45
-                f_p_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 34) # Antes 35
+                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 42) # Antes 45
+                f_p_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30) # Antes 35
                 f_s_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22) # SKU nuevo, más grande
                 
                 # Dibujo de textos con las nuevas fuentes
@@ -281,7 +281,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((start_x, 380), "S/", font=f_ps, fill=(255,255,255), anchor="lm")
                 draw.text((start_x + w_s + 10, 380), str(row['Precio desc']), font=f_pv, fill=(255,255,255), anchor="lm")
             # Legales Display: Márgenes 40 a 480 (Mitad del banner), force_justify=False para legibilidad
-            draw_justified_text(draw, str(row['Legales']), f_l, 465, 44, 510, (255,255,255), line_spacing_offset=-1, force_justify=False)
+            draw_justified_text(draw, str(row['Legales']), f_l, 465, 44, 520, (255,255,255), line_spacing_offset=-1, force_justify=True)
 
     # --- GUARDADO FINAL ---
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{tienda}.jpg"
