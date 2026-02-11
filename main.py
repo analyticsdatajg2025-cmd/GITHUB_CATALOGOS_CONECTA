@@ -114,7 +114,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     try:
         p_size = 90; s_size = 35; l_size = 10
         if formato == "DISPLAY": 
-            p_size = 50; s_size = 20; l_size = 7 # l_size=9 es el aumento de 3pt solicitado
+            p_size = 50; s_size = 20; l_size = 7.5 # l_size=9 es el aumento de 3pt solicitado
         elif formato == "STORY": 
             p_size = 100; s_size = 40
         elif formato == "FLYER":
@@ -281,7 +281,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((start_x, 380), "S/", font=f_ps, fill=(255,255,255), anchor="lm")
                 draw.text((start_x + w_s + 10, 380), str(row['Precio desc']), font=f_pv, fill=(255,255,255), anchor="lm")
             # Legales Display: Márgenes 40 a 480 (Mitad del banner), force_justify=False para legibilidad
-            draw_justified_text(draw, str(row['Legales']), f_l, 465, 44, 520, (255,255,255), line_spacing_offset=-1, force_justify=True)
+            draw_justified_text(draw, str(row['Legales']), f_l, 465, 44, 500, (255,255,255), line_spacing_offset=-1, force_justify=True)
 
     # --- GUARDADO FINAL ---
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{tienda}.jpg"
