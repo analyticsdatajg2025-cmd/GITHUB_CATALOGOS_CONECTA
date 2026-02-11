@@ -129,45 +129,55 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         f_f = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26) # Fecha Flyer
     except: f_m = f_p = f_pv = f_ps = f_s_ind = f_l = f_f = ImageFont.load_default()
 
-    # --- FORMATO: FLYER ---
+# --- FORMATO: FLYER ADAPTATIVO (6 vs 8 productos) ---
     if formato == "FLYER":
-        # Fecha Flyer: X=540 (Horizontal), Y=260 (Vertical)
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
         draw.text((540, 260), f_txt, font=f_f, fill=(255,255,255), anchor="mm")
         
-        box_h = 330 if len(data_input) > 6 else 450
+        num_prod = len(data_input)
+        # Ajustamos el tamaño de cajas e imágenes según cantidad de productos
+        if num_prod > 6:
+            box_h, img_size, preciador_scale = 330, 250, 0.5
+        else:
+            box_h, img_size, preciador_scale = 450, 330, 0.6 # Imagen más grande para 6 productos
+            
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
             xp, yp = 65+(i%2)*495, 345+(i//2)*(box_h+12)
             
-            # Líneas punteadas (Colores dinámicos)
             line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
-            if i % 2 == 0: draw_dotted_line(draw, (xp+475, yp+20), (xp+475, yp+box_h-20), line_c)
-            if i < 6: draw_dotted_line(draw, (xp+20, yp+box_h+6), (xp+435, yp+box_h+6), line_c)
+            
+            # LÍNEA VERTICAL: Solo si hay un producto a la derecha en la misma fila
+            if i % 2 == 0 and (i + 1) < num_prod: 
+                draw_dotted_line(draw, (xp+475, yp+20), (xp+475, yp+box_h-20), line_c)
+            
+            # LÍNEA HORIZONTAL (SUELO): Solo si hay productos en la fila de ABAJO
+            # Esto elimina la línea sobrante cuando solo hay 6 productos
+            if (i + 2) < num_prod: 
+                draw_dotted_line(draw, (xp+20, yp+box_h+6), (xp+435, yp+box_h+6), line_c)
 
-            # Imagen Producto Flyer
             try:
                 pi_res = requests.get(p['Foto del producto calado'], timeout=10)
                 pi_fly = Image.open(BytesIO(pi_res.content)).convert("RGBA")
-                pi_fly.thumbnail((250, 250))
-                img.paste(pi_fly, (xp + 240 - pi_fly.width//2, yp + 120 - pi_fly.height//2), pi_fly)
+                # Usamos el img_size dinámico (330px para 6 productos)
+                pi_fly.thumbnail((img_size, img_size))
+                # Posición dinámica centrada verticalmente en el box_h correspondiente
+                img.paste(pi_fly, (xp + 240 - pi_fly.width//2, yp + (box_h//2.3) - pi_fly.height//2), pi_fly)
             except: pass
 
-            cx_l = xp + 125 # Centro de la columna izquierda del flyer
-            # Ajuste Y -8px para bajar marca, producto y sku
+            cx_l = xp + 125
+            # Ajuste de posición final (+4px abajo respecto al original)
             draw.text((cx_l, yp+box_h-113), p['Marca'], font=f_m, fill=(0,0,0), anchor="mm")
             draw.text((cx_l, yp+box_h-83), p['Nombre del producto'][:20], font=f_p, fill=(0,0,0), anchor="mm")
             draw.text((cx_l, yp+box_h-58), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
             
-            # Preciador Flyer (Mitad de tamaño scale=0.5)
             if "EFERTON" in tipo: 
-                draw_efe_preciador(draw, xp+345, yp+box_h-75, "S/", str(p['Precio desc']), f_ps, f_pv, scale=0.5, tracking=-2)
+                draw_efe_preciador(draw, xp+345, yp+box_h-75, "S/", str(p['Precio desc']), f_ps, f_pv, scale=preciador_scale, tracking=-2)
             else:
                 w_s = draw.textlength("S/", font=f_ps)
                 draw.text((xp+305, yp+box_h-75), "S/", font=f_ps, fill="#FFA002", anchor="lm")
                 draw.text((xp+305 + w_s + 6, yp+box_h-75), str(p['Precio desc']), font=f_pv, fill="#FFA002", anchor="lm")
         
-        # Legales Flyer: De margen 65 hasta margen 1015
         draw_justified_text(draw, str(row['Legales']), f_l, 1835, 65, 1015, (255,255,255), line_spacing_offset=1)
 
     # --- FORMATOS: PPL, STORY, DISPLAY ---
@@ -207,7 +217,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             else: 
                 # PPL PRECIO IRRESISTIBLE
                 # Imagen: 80px Izquierda (490) y 70px Abajo (640)
-                pi.thumbnail((600, 600)); img.paste(pi, (640-pi.width//2, 640-pi.height//2), pi)
+                pi.thumbnail((730, 730)); img.paste(pi, (660-pi.width//2, 640-pi.height//2), pi)
                 ay = 720 
                 draw.text((100, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="lm")
                 # Producto en 2 filas
@@ -226,7 +236,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
         # 2. STORY (Mantenido intacto)
         elif formato == "STORY":
-            pi.thumbnail((900, 900)); img.paste(pi, (540-pi.width//2, 630), pi)
+            pi.thumbnail((1000, 1000)); img.paste(pi, (540-pi.width//2, 630), pi)
             ay = 1600 
             draw.text((280, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="mm")
             draw.text((280, ay+50), row['Nombre del producto'][:30], font=f_p, fill=(255,255,255), anchor="mm")
@@ -242,10 +252,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
         # 3. DISPLAY
         elif formato == "DISPLAY":
-            pi.thumbnail((400, 400))
+            pi.thumbnail((500, 500))
             if "IRRESISTIBLE" in tipo: img.paste(pi, (480, 70), pi)
             else: img.paste(pi, (480, 70), pi)
-            cx = 265 # Centro del área de texto
+            cx = 260 # Centro del área de texto
             # Bajado +10px (220->230, 260->270, 290->300)
             draw.text((cx, 250), row['Marca'], font=f_m, fill=(255,255,255), anchor="mm")
             draw.text((cx, 290), row['Nombre del producto'][:25], font=f_p, fill=(255,255,255), anchor="mm")
@@ -260,7 +270,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((start_x, 380), "S/", font=f_ps, fill=(255,255,255), anchor="lm")
                 draw.text((start_x + w_s + 10, 380), str(row['Precio desc']), font=f_pv, fill=(255,255,255), anchor="lm")
             # Legales Display: Márgenes 40 a 480 (Mitad del banner), force_justify=False para legibilidad
-            draw_justified_text(draw, str(row['Legales']), f_l, 520, 44, 600, (255,255,255), line_spacing_offset=-1, force_justify=True)
+            draw_justified_text(draw, str(row['Legales']), f_l, 480, 44, 500, (255,255,255), line_spacing_offset=-1, force_justify=True)
 
     # --- GUARDADO FINAL ---
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{tienda}.jpg"
