@@ -19,67 +19,73 @@ REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
 def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing_offset=0, force_justify=False):
-    # 1. Preparación del prefijo en Negrita (SemiBold)
+    # 1. Preparación del prefijo y fuentes
     prefix = "CONDICIONES GENERALES: "
     if text.startswith("CONDICIONES GENERALES"):
         text = text.replace("CONDICIONES GENERALES:", "").strip()
     
-    # Intentamos obtener la versión SemiBold de la fuente actual para el prefijo
     try:
         font_path = font.path.replace("Regular", "SemiBold")
         font_bold = ImageFont.truetype(font_path, font.size)
     except:
         font_bold = font
 
-    # 2. Ajuste dinámico de ancho de línea (width)
-    # Esto soluciona que en PPL y Display el texto se quede a la mitad
     container_width = x_end - x_start
-    
-    if container_width > 800:   # Caso PPL (Márgenes muy anchos)
-        chars_per_line = 95     
-    elif container_width > 450: # Caso Display e Irresistible PPL
-        chars_per_line = 85     
-    else:                       # Caso Story y Flyer (Contenedores estrechos)
-        chars_per_line = 68     
-    
     full_text = prefix + text
-    lines = textwrap.wrap(full_text, width=chars_per_line)
-    line_height = font.getbbox("Ay")[3] + line_spacing_offset
+    words = full_text.split()
     
-    for i, line in enumerate(lines):
-        words = line.split()
-        if not words: continue
+    # 2. LÓGICA DE SALTO DE LÍNEA POR PÍXELES (Automática)
+    lines = []
+    current_line = []
+    current_width = 0
+    space_w = draw.textlength(" ", font=font)
 
-        # Identificamos si es la última línea o si está muy vacía para NO justificar
+    for word in words:
+        # Verificamos si es una de las palabras en negrita para medirla bien
+        is_bold = (len(lines) == 0 and len(current_line) <= 1)
+        word_font = font_bold if is_bold else font
+        word_w = draw.textlength(word, font=word_font)
+
+        if current_width + word_w <= container_width:
+            current_line.append(word)
+            current_width += word_w + space_w
+        else:
+            lines.append(current_line)
+            current_line = [word]
+            current_width = word_w + space_w
+    if current_line:
+        lines.append(current_line)
+
+    line_height = font.getbbox("Ay")[3] + line_spacing_offset
+
+    # 3. DIBUJO Y JUSTIFICACIÓN
+    for i, line_words in enumerate(lines):
+        if not line_words: continue
+
         is_last_line = (i == len(lines) - 1)
-        line_pixels = sum(draw.textlength(w, font=font) for w in words)
-        
-        # Umbral de seguridad para evitar huecos gigantes si hay muy pocas palabras
+        # Medimos el ancho real de la línea para el umbral de vacío
+        line_pixels = sum(draw.textlength(w, font=font_bold if (i==0 and j<=1) else font) for j, w in enumerate(line_words))
         too_empty = line_pixels < (container_width * 0.7)
 
         if is_last_line or too_empty or not force_justify:
-            # ALINEACIÓN IZQUIERDA (Para la última línea o líneas con poco texto)
+            # ALINEACIÓN IZQUIERDA
             x_cursor = x_start
-            for j, word in enumerate(words):
-                # Solo las dos primeras palabras de la primera línea van en Bold
+            for j, word in enumerate(line_words):
                 current_font = font_bold if (i == 0 and j <= 1) else font
                 draw.text((x_cursor, y_start), word, font=current_font, fill=fill)
-                x_cursor += draw.textlength(word + " ", font=current_font)
+                x_cursor += draw.textlength(word, font=current_font) + space_w
         else:
-            # JUSTIFICACIÓN MATEMÁTICA (Para bloques cuadrados perfectos)
-            # Calculamos el ancho total de las palabras (considerando el Bold si aplica)
-            total_words_w = sum(draw.textlength(w, font=font_bold if (i == 0 and idx_w <= 1) else font) 
-                                for idx_w, w in enumerate(words))
+            # JUSTIFICACIÓN MATEMÁTICA
+            total_words_w = sum(draw.textlength(w, font=font_bold if (i == 0 and j <= 1) else font) for j, w in enumerate(line_words))
+            # Calculamos el espacio exacto para que toque ambos bordes (x_start y x_end)
+            dynamic_space = (container_width - total_words_w) / (len(line_words) - 1)
             
-            # Espaciado dinámico entre palabras
-            space_width = (container_width - total_words_w) / (len(words) - 1)
             x_cursor = x_start
-            for j, word in enumerate(words):
+            for j, word in enumerate(line_words):
                 current_font = font_bold if (i == 0 and j <= 1) else font
                 draw.text((x_cursor, y_start), word, font=current_font, fill=fill)
-                x_cursor += draw.textlength(word, font=current_font) + space_width
+                x_cursor += draw.textlength(word, font=current_font) + dynamic_space
         
-        # Bajamos a la siguiente línea
         y_start += line_height
 
 # Función para dibujar líneas punteadas divisorias
@@ -96,7 +102,7 @@ def draw_dotted_line(draw, start, end, fill, width=2, gap=8):
         e = (curr_x + sx * (i + gap), curr_y + sy * (i + gap))
         draw.line([s, e], fill=fill, width=width)
 
-def draw_efe_preciador(draw, x_center, y_center, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2):
+def draw_efe_preciador(draw, x_center, y_center, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2, padding_h=20):
     num_w = 0
     for char in text_price:
         num_w += draw.textlength(char, font=f_pv) + tracking
@@ -105,16 +111,17 @@ def draw_efe_preciador(draw, x_center, y_center, text_s, text_price, f_ps, f_pv,
     
     gap = 8 * scale 
     full_w = sym_w + gap + num_w
-
-    # --- CAMBIO AQUÍ: Altura dinámica ---
-    # En lugar de 110 fijo, usamos el tamaño de la fuente de precio + un margen (padding)
-    # 1.4 es un factor que envuelve bien a la tipografía Poppins
     font_size = f_pv.size
-    h = int(font_size * 1.4 * scale) 
-    # ------------------------------------
+    
+    # Mantenemos el 1.2 que redujo la altura vertical
+    h = int(font_size * 1.2 * scale) 
 
-    draw.rounded_rectangle([x_center - full_w//2 - 20, y_center - h//2, x_center + full_w//2 + 20, y_center + h//2], 
-                           radius=15, fill="#FFA002")
+    # Ahora el padding horizontal es variable
+    p_h = padding_h * scale
+    
+    draw.rounded_rectangle([x_center - full_w//2 - p_h, y_center - h//2, 
+                             x_center + full_w//2 + p_h, y_center + h//2], 
+                            radius=15, fill="#FFA002")
     
     tx = x_center - full_w//2
     draw.text((tx, y_center), text_s, font=f_ps, fill=(255,255,255), anchor="lm")
@@ -253,15 +260,26 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             y_precio = yp + box_h - 85 
             
             if "EFERTON" in tipo:
-                draw_efe_preciador(draw, cx_col2, y_precio, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale)
+                draw_efe_preciador(draw, cx_col2, y_precio, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale, padding_h=25)
                 draw.text((cx_col2, y_precio + 45), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
             else:
+                # --- PRECIO IRRESISTIBLE ---
+                # 1. Mantenemos tu lógica de dibujo de precio tal cual (alineado a la izquierda)
                 w_s = draw.textlength("S/", font=f_ps_fly)
-                w_total_p = w_s + 5 + draw.textlength(str(p['Precio desc']), font=f_pv_fly)
+                w_num = draw.textlength(str(p['Precio desc']), font=f_pv_fly)
+                gap = 5
+                
+                # Calculamos dónde empieza el bloque para que el conjunto esté centrado en la columna
+                w_total_p = w_s + gap + w_num
                 x_ini_p = cx_col2 - (w_total_p // 2)
+                
+                # Dibujo del precio (esto no cambia su posición actual)
                 draw.text((x_ini_p, y_precio), "S/", font=f_ps_fly, fill="#FFA002", anchor="ls")
-                draw.text((x_ini_p + w_s + 5, y_precio), str(p['Precio desc']), font=f_pv_fly, fill="#FFA002", anchor="ls")
-                draw.text((cx_col2, y_precio + 45), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
+                draw.text((x_ini_p + w_s + gap, y_precio), str(p['Precio desc']), font=f_pv_fly, fill="#FFA002", anchor="ls")
+                
+                # 2. AJUSTE DEL SKU: Para que esté justo debajo del centro del precio
+                # Usamos cx_col2 con anchor "mm" para que se alinee con el eje central del bloque de arriba
+                draw.text((cx_col2, y_precio + 35), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
             
             # Divisores
             line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
@@ -292,7 +310,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 
                 # COLUMNA 1: MARCA (Comienza en X=90, Y=900)
                 f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30) # -2pts de los 32 originales
-                draw.text((90, 900), row['Marca'], font=f_m_efe, fill=(255,255,255), anchor="ls")
+                draw.text((90, 930), row['Marca'], font=f_m_efe, fill=(255,255,255), anchor="ls")
                 
                 # COLUMNA 2: NOMBRE Y SKU (Centro del banner X=500, pero bajados)
                 # Nombre: 830 + 15 (original) + 52 (pedido) = 897 
@@ -420,7 +438,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 
                 # Legales Irresistible
                 f_l_story = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
-                draw_justified_text(draw, str(row['Legales']), f_l_story, 1090, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
+                draw_justified_text(draw, str(row['Legales']), f_l_story, 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
 
 # --- FORMATO: DISPLAY (Ajustes Eferton e Irresistible) ---
         elif formato == "DISPLAY":
@@ -471,7 +489,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 
                 # PRECIO DINÁMICO: Se posiciona relativo al SKU para evitar que se choquen
                 # Si el SKU baja por la segunda línea del nombre, el precio baja con él
-                y_precio = max(364, y_sku + 55) 
+                y_precio = max(379, y_sku + 70)
 
                 f_pv_irr = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 76)
                 f_ps_irr = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 42)
