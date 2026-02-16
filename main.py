@@ -18,33 +18,53 @@ REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 # URL base para acceder a las imágenes generadas públicamente
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
-# Función para renderizar el bloque de texto legal con justificación
-def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing_offset=0, force_justify=True):
-    # Asegura que el texto siempre empiece con el prefijo de legales
-    if not text.startswith("CONDICIONES GENERALES"):
-        text = "CONDICIONES GENERALES: " + text
-        
-    # El valor 'width' define cuántos caracteres caben antes de saltar de línea
-    # 135 caracteres si el bloque es ancho (>600px), de lo contrario 65
-    lines = textwrap.wrap(text, width=135 if (x_end - x_start) > 600 else 65)
-    # Calcula la altura de la línea basado en la fuente + un margen de ajuste
+def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing_offset=0, force_justify=False):
+    # 1. Preparación del prefijo en Negrita (SemiBold)
+    prefix = "CONDICIONES GENERALES: "
+    if text.startswith("CONDICIONES GENERALES"):
+        text = text.replace("CONDICIONES GENERALES:", "").strip()
+    
+    # Intentamos obtener la versión SemiBold de la fuente actual
+    try:
+        font_path = font.path.replace("Regular", "SemiBold")
+        font_bold = ImageFont.truetype(font_path, font.size)
+    except:
+        font_bold = font
+
+    container_width = x_end - x_start
+    chars_per_line = 135 if container_width > 600 else 68
+    
+    full_text = prefix + text
+    lines = textwrap.wrap(full_text, width=chars_per_line)
     line_height = font.getbbox("Ay")[3] + line_spacing_offset
     
-    # Itera sobre cada línea generada por el wrap
     for i, line in enumerate(lines):
         words = line.split()
-        # Si es la última línea o solo hay una palabra, no justifica (alinea a la izquierda)
-        if i == len(lines) - 1 or len(words) <= 1 or not force_justify:
-            draw.text((x_start, y_start), line, font=font, fill=fill)
-        else:
-            # Cálculo para distribuir espacios uniformemente entre palabras (justificado)
-            total_words_w = sum(draw.textlength(w, font=font) for w in words)
-            space_width = ((x_end - x_start) - total_words_w) / (len(words) - 1)
+        if not words: continue
+
+        # Identificamos si es la última línea o si está muy vacía para NO justificar
+        is_last_line = (i == len(lines) - 1)
+        line_pixels = sum(draw.textlength(w, font=font) for w in words)
+        too_empty = line_pixels < (container_width * 0.7)
+
+        if is_last_line or too_empty or not force_justify:
+            # ALINEACIÓN IZQUIERDA (Última línea o línea vacía)
             x_cursor = x_start
-            for word in words:
-                draw.text((x_cursor, y_start), word, font=font, fill=fill)
-                x_cursor += draw.textlength(word, font=font) + space_width
-        # Incrementa la posición Y para la siguiente línea
+            for j, word in enumerate(words):
+                # Solo las dos primeras palabras de la primera línea van en Bold
+                current_font = font_bold if (i == 0 and j <= 1) else font
+                draw.text((x_cursor, y_start), word, font=current_font, fill=fill)
+                x_cursor += draw.textlength(word + " ", font=current_font)
+        else:
+            # JUSTIFICACIÓN MATEMÁTICA (Líneas intermedias llenas)
+            total_words_w = sum(draw.textlength(w, font=font_bold if (i == 0 and j <= 1) else font) for j, w in enumerate(words))
+            space_width = (container_width - total_words_w) / (len(words) - 1)
+            x_cursor = x_start
+            for j, word in enumerate(words):
+                current_font = font_bold if (i == 0 and j <= 1) else font
+                draw.text((x_cursor, y_start), word, font=current_font, fill=fill)
+                x_cursor += draw.textlength(word, font=current_font) + space_width
+        
         y_start += line_height
 
 # Función para dibujar líneas punteadas divisorias
@@ -225,10 +245,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             if i % 2 == 0 and (i + 1) < num_prod: 
                 draw_dotted_line(draw, (xp+475, yp+20), (xp+475, yp+box_h-20), line_c)
         
-        # Legales Flyer
+        # Legales Flyer (Asegúrate de agregar el force_justify=True al final)
         l_margin = 70 if "EFERTON" in tipo else 62
         f_l_flyer = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
-        draw_justified_text(draw, str(row['Legales']), f_l_flyer, 1835, l_margin, 1080 - l_margin, (255,255,255), line_spacing_offset=1)
+        
+        # Agregamos force_justify=True para que se vea como bloque cuadrado
+        draw_justified_text(draw, str(row['Legales']), f_l_flyer, 1835, l_margin, 1080 - l_margin, (255,255,255), line_spacing_offset=1, force_justify=True)
 
     # --- LÓGICA PARA OTROS FORMATOS (PPL, STORY, DISPLAY) ---
     else:
@@ -264,7 +286,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 
                 # LEGALES: Y=998 (980+18), Margen 90px (X_ini=90, X_fin=910)
                 # force_justify=False para que no se vea tan separado
-                draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 910, (255,255,255), line_spacing_offset=1, force_justify=False)
+                draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 910, (255,255,255), line_spacing_offset=1, force_justify=True)
                 
             else: 
                 # --- PPL PRECIO IRRESISTIBLE ---
@@ -302,7 +324,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((lx + w_s + 10, py), str(row['Precio desc']), font=f_pv80, fill=(255,255,255), anchor="ls")
                 
                 # Legales Irresistible: Margen 73px (X_ini=73, X_fin=927), Y=937
-                draw_justified_text(draw, str(row['Legales']), f_l, 937, 73, 927, (255,255,255), line_spacing_offset=0)
+                draw_justified_text(draw, str(row['Legales']), f_l, 937, 73, 927, (255,255,255), line_spacing_offset=0, force_justify=True)
 
  # --- FORMATO: STORY (9:16 - Ajustes Eferton e Irresistible) ---
         elif formato == "STORY":
@@ -331,7 +353,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 
                 # Legales Eferton: Y=1800, Margen 70 (X_ini=70, X_fin=1010), Tamaño +2pts
                 f_l_story = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
-                draw_justified_text(draw, str(row['Legales']), f_l_story, 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=False)
+                draw_justified_text(draw, str(row['Legales']), f_l_story, 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
 
             # 2. LÓGICA PARA IRRESISTIBLE
             else:
@@ -368,7 +390,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Legales Irresistible: Y=109 (esta posición es arriba según tu pedido), 
                 # Margen 70 (X_ini=70, X_fin=1010), Letra +2pts, force_justify=False
                 f_l_story = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
-                draw_justified_text(draw, str(row['Legales']), f_l_story, 109, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=False)
+                draw_justified_text(draw, str(row['Legales']), f_l_story, 109, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
 
 # --- FORMATO: DISPLAY (Ajustes Eferton e Irresistible) ---
         elif formato == "DISPLAY":
@@ -379,9 +401,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 img.paste(pi, (440, 25), pi)
                 
                 cx = 260 # Centro para Eferton
-                # Marca: Reducir 2pts (de 32 a 30)
-                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
-                draw.text((cx, 250), row['Marca'], font=f_m_efe, fill=(255,255,255), anchor="mm")
+                # Usamos el f_m definido arriba pero le restamos 2 al tamaño
+                f_m_small = ImageFont.truetype(f_m.path, f_m.size - 2)
+                draw.text((cx, 250), row['Marca'], font=f_m_small, fill=(255,255,255), anchor="mm")
                 
                 # Nombre Producto
                 draw.text((cx, 290), row['Nombre del producto'][:25], font=f_p, fill=(255,255,255), anchor="mm")
@@ -393,7 +415,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_efe_preciador(draw, cx, 380, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.0, tracking=-3)
                 
                 # Legales Eferton: X inicial 40, X final 486 (como ya bajamos la posicion de legales, ahora ocupa todo el ancho pero margen 40px ambos lados)
-                draw_justified_text(draw, str(row['Legales']), f_l, 489, 40, 486, (255,255,255), line_spacing_offset=-1, force_justify=True)
+                draw_justified_text(draw, str(row['Legales']), f_l, 490, 40, 960, (255,255,255), line_spacing_offset=-1, force_justify=True)
 
             # 2. LÓGICA PARA IRRESISTIBLE
             else:
