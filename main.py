@@ -75,7 +75,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     if not full_p: return None
     img = Image.open(full_p).convert("RGB"); draw = ImageDraw.Draw(img)
 
-    try:
+   try:
         # --- CARGA INICIAL DE FUENTES COMUNES ---
         f_f = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 24) # Fuente Fecha
         
@@ -98,7 +98,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 73) 
             f_s_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)    
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 16)
-            f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 18) 
+            f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 18)
+            # --- AGREGADO f_ps AQUÍ PARA EVITAR EL ERROR ---
+            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 30) 
         else: # DISPLAY
             f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 34)
             f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20)
@@ -108,8 +110,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 9)
             
     except: 
+        # Aseguramos que todas las variables existan en caso de error de carga
         f_m = f_p = f_pv = f_ps = f_s_ind = f_s_fly = f_f = f_l = ImageFont.load_default()
-
+        
     # --- LÓGICA DE POSICIONAMIENTO FLYER (Múltiples productos) ---
     if formato == "FLYER":
         # 1. Fecha con margen x=64
