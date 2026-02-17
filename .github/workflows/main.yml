@@ -9,30 +9,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-
       - name: Deps
         run: pip install Pillow pandas gspread oauth2client requests
-
       - name: Run Script
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: python main.py
-
       - name: Push Designs
         run: |
           git config --global user.name "Elias-Martech-Bot"
           git config --global user.email "analytics.data.jg.2025@gmail.com"
-          
-          # Verificamos si la carpeta existe y no está vacía
-          if [ -d "output" ] && [ "$(ls -A output)" ]; then
-            git add output/*
-            git commit -m "Auto-generación de piezas - $(date -d '5 hours ago' '+%Y-%m-%d %H:%M')" || echo "Nada nuevo para commitear"
-            git push
-          else
-            echo "La carpeta output está vacía o no existe. Saltando subida."
-          fi
+          git add output/*
+          git commit -m "Auto-generación de piezas - $(date -u -d '5 hours ago' '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
+          git push
