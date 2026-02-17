@@ -402,7 +402,13 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 data, res_sheet, viejos = get_sheets_data(); os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 
-# Procesar productos individuales (Story, PPL, Display)
+# --- BUCLE DE EJECUCIÓN PRINCIPAL ---
+data, res_sheet, viejos = get_sheets_data()
+os.makedirs('output', exist_ok=True)
+h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+archivos_generados = 0 # Contador indispensable
+
+# Procesar productos individuales
 for idx, row in data.iterrows():
     f_v = str(row['Formato']).upper().strip()
     if f_v in ["FLYER", "", "0"]: continue
@@ -410,9 +416,11 @@ for idx, row in data.iterrows():
         llave = f"{row['SKU']}_{f_v}_{c}".upper()
         if llave not in viejos:
             url = generar_diseno(row, c)
-            if url: res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+            if url: 
+                res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+                archivos_generados += 1 # Sumar cada vez que se guarda un archivo
 
-# Procesar Flyers (Agrupados por ID_Flyer)
+# Procesar Flyers
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
 for id_f, group in fly_g.groupby('ID_Flyer'):
     if str(id_f) in ["0", "0.0", ""]: continue
@@ -420,4 +428,14 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
         llave = f"{id_f}_FLYER_{c}".upper()
         if llave not in viejos:
             url = generar_diseno(group, c)
-            if url: res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+            if url: 
+                res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+                archivos_generados += 1
+
+# --- SOLUCIÓN AL ERROR FATAL DE GIT ---
+if archivos_generados == 0:
+    print("No se generaron archivos nuevos. Creando placeholder para evitar error de Git.")
+    with open("output/placeholder.txt", "w") as f:
+        f.write(f"Sin cambios en esta ejecución: {h_lima}")
+else:
+    print(f"Éxito: Se crearon {archivos_generados} archivos.")
