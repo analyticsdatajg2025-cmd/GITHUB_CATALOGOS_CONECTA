@@ -192,7 +192,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 # --- LÓGICA ESPECÍFICA PARA FORMATO: FLYER (Centrado Dinámico y Ajustes de Diseño) ---
     if formato == "FLYER":
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
-    
+
         # Bloque de fecha con contenedor naranja
         rect_x, rect_y = (163 if "IRRESISTIBLE" in tipo else 190), 244
         f_f_semibold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 23)
@@ -205,7 +205,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         y_limit_bottom = 1757
         available_h = y_limit_bottom - y_limit_top
         
-        # --- ESTA PARTE DEBE ESTAR INDENTADA DENTRO DEL IF FLYER ---
         if num_prod > 6:
             rows = 4
             box_h = 340
@@ -217,7 +216,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             img_size_w, img_size_h = 434, 292
             preciador_scale = 0.55
 
-        # CÁLCULO DE CENTRADO VERTICAL
         total_content_h = (rows * box_h) + ((rows - 1) * 12)
         y_centering_offset = (available_h - total_content_h) // 2
         current_y_top = y_limit_top + y_centering_offset
@@ -228,7 +226,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             xp = 65 + (i % 2) * 495
             yp = current_y_top + (i // 2) * (box_h + 12)
             
-            # Pegado de imagen centrada
             try:
                 url_foto = p.get('Foto del producto calado') or p.get('Foto')
                 if url_foto:
@@ -244,7 +241,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             cx_col1 = xp + 125
             cx_col2 = xp + 345
             
-            # 1. Marca y Nombre (Máximo 2 filas)
+            # 1. Marca y Nombre
             f_m_flyer = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 28)
             draw.text((cx_col1, yp + box_h - 115), p['Marca'], font=f_m_flyer, fill=(0,0,0), anchor="mm")
             
@@ -254,33 +251,33 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((cx_col1, y_nombre), line, font=f_p, fill=(0,0,0), anchor="mm")
                 y_nombre += 22
             
-            # 2. Precio y SKU (A ras y solo valor)
+            # 2. Precio y SKU
             f_pv_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 53)
             f_ps_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 30)
-            y_precio = yp + box_h - 115
             
             if "EFERTON" in tipo:
-                draw_efe_preciador(draw, cx_col2, y_precio, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale + 0.1, padding_h=35)
-                draw.text((cx_col2, y_precio + 55), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
+                # Bajamos y_precio de -115 a -105 para acercarlo al SKU
+                y_precio_efe = yp + box_h - 105
+                # Aumentamos scale a + 0.15 para que el preciador se vea más robusto
+                draw_efe_preciador(draw, cx_col2, y_precio_efe, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale + 0.15, padding_h=35)
+                # SKU movido +8px a la derecha para centrarlo bajo el bloque de precio
+                draw.text((cx_col2 + 8, y_precio_efe + 50), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
             else:
                 # --- PRECIO IRRESISTIBLE ---
-                # 1. Mantenemos tu lógica de dibujo de precio tal cual (alineado a la izquierda)
+                # Bajamos y_precio de -115 a -100 para que no esté tan separado del SKU
+                y_precio_irr = yp + box_h - 100
                 w_s = draw.textlength("S/", font=f_ps_fly)
                 w_num = draw.textlength(str(p['Precio desc']), font=f_pv_fly)
                 gap = 5
-                
-                # Calculamos dónde empieza el bloque para que el conjunto esté centrado en la columna
                 w_total_p = w_s + gap + w_num
                 x_ini_p = cx_col2 - (w_total_p // 2)
                 
-                # Dibujo del precio (esto no cambia su posición actual)
-                draw.text((x_ini_p, y_precio), "S/", font=f_ps_fly, fill="#FFA002", anchor="ls")
-                draw.text((x_ini_p + w_s + gap, y_precio), str(p['Precio desc']), font=f_pv_fly, fill="#FFA002", anchor="ls")
+                draw.text((x_ini_p, y_precio_irr), "S/", font=f_ps_fly, fill="#FFA002", anchor="ls")
+                draw.text((x_ini_p + w_s + gap, y_precio_irr), str(p['Precio desc']), font=f_pv_fly, fill="#FFA002", anchor="ls")
                 
-                # 2. AJUSTE DEL SKU: Para que esté justo debajo del centro del precio
-                # Usamos cx_col2 con anchor "mm" para que se alinee con el eje central del bloque de arriba
-                draw.text((cx_col2, y_precio + 45), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")            
-            
+                # SKU movido +8px a la derecha y acercado al precio (+35 en lugar de +45)
+                draw.text((cx_col2 + 8, y_precio_irr + 35), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm") 
+
             # Divisores
             line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
             if i % 2 == 0 and (i + 1) < num_prod: 
@@ -292,7 +289,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         l_margin = 70 if "EFERTON" in tipo else 62
         f_l_flyer = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
         draw_justified_text(draw, str(row['Legales']), f_l_flyer, 1835, l_margin, 1080 - l_margin, (255,255,255), line_spacing_offset=1, force_justify=True)
-
+        
     # --- LÓGICA PARA OTROS FORMATOS (PPL, STORY, DISPLAY) ---
     else:
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -397,7 +394,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
                 # Usamos X=780 para centrar el bloque naranja en el espacio derecho
                 px_story = 780
-                py_story = 1655
+                py_story = 1650
 
                 # Solo llamamos a la función (eliminamos el dibujo de texto manual que tenías después)
                 draw_efe_preciador(draw, px_story, py_story, "S/", str(row['Precio desc']), f_ps_efe, f_pv_efe, scale=1.1, padding_h=30)
@@ -503,7 +500,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((lx + w_s_irr + 10, y_precio), str(row['Precio desc']), font=f_pv_irr, fill=(255,255,255), anchor="ls")
                 
                 # Legales: Los mantenemos en el fondo
-                draw_justified_text(draw, str(row['Legales']), f_l, 490, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
+                draw_justified_text(draw, str(row['Legales']), f_l, 492, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
 
     # --- GUARDADO FINAL ---
     # Nombra el archivo con SKU/ID, formato y tienda
