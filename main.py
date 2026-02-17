@@ -177,7 +177,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             if i >= 8: break
             
             xp = 64 + (i % 2) * (box_w + 40)
-            yp = 320 + (i // 2) * (box_h + gap_y)
+            yp = 340 + (i // 2) * (box_h + gap_y)
             
             # Dibujar Caja con fondo Blanco y contorno según border_c
             draw.rounded_rectangle([xp, yp, xp+box_w, yp+box_h], radius=15, fill=(255,255,255), outline=border_c, width=2)
@@ -316,7 +316,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
             # --- SKU ---
             # Se mantiene centrado en el eje 810, bajando relativo al nuevo y del precio
-            draw.text((810, anchor_y_precio + 60), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
+            draw.text((810, anchor_y_precio + 40), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
 
             # --- CONFIGURACIÓN DE LEGALES ---
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 14)
@@ -333,17 +333,28 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             )
     
         elif formato == "PPL":
-            # --- CONFIGURACIÓN DE IMAGEN (SIN DEFORMACIÓN) ---
+            # --- CONFIGURACIÓN DE IMAGEN ---
+            # El área máxima permitida sigue siendo 747x550
             pi.thumbnail((747, 550), Image.Resampling.LANCZOS)
-            img.paste(pi, (126, 236), pi)
+            
+            # --- CÁLCULO DE CENTRADO DINÁMICO ---
+            # Ancho del lienzo (PPL suele ser 1080)
+            canvas_width = 1080 
+            # Calculamos X para que el punto medio de 'pi' coincida con el centro de 1080
+            # x = (1080 / 2) - (ancho_de_imagen / 2)
+            px_centrado = (canvas_width - pi.width) // 2
+            
+            # Subimos la posición Y de 236 a 180 para dar más aire abajo
+            py_posicion = 180
+            
+            # Pegamos la imagen con el nuevo centro
+            img.paste(pi, (px_centrado, py_posicion), pi)
 
-            # --- CONFIGURACIÓN BASE DE ALTURAS (ALINEACIÓN RELATIVA) ---
-            # Bajamos anchor_y de 750 a 830 para nivelar la Marca con el Precio
-            anchor_y_izq = 830 
-            # El punto base del precio se mantiene cerca para alineación visual
-            punto_precio_y = anchor_y_izq + 65 
+            # --- CONFIGURACIÓN DE ALTURAS (Lo mantenemos para no afectar textos) ---
+            y_base_alineacion = 850 
+            y_precio = 865 # El ajuste que hicimos para que el precio no esté tan arriba
 
-            # --- POSICIONAMIENTO DE PRECIO Y SKU (LADO DERECHO) ---
+            # --- POSICIONAMIENTO DE PRECIO Y SKU (DERECHA) ---
             p_v = str(row['Precio desc'])
             w_simbolo = draw.textlength("S/", font=f_ps)
             w_monto = draw.textlength(p_v, font=f_pv)
@@ -353,28 +364,21 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             eje_x_derecha = 820
             px_inicio_bloque = eje_x_derecha - tw_precio // 2 
             
-            # Dibujamos S/ y Precio (anchor "ls" para nivelar al ras inferior)
-            draw.text((px_inicio_bloque, punto_precio_y), "S/", font=f_ps, fill=txt_c, anchor="ls")
+            draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls")
             px_numero = px_inicio_bloque + w_simbolo + espacio_interno
-            draw.text((px_numero, punto_precio_y), p_v, font=f_pv, fill=txt_c, anchor="ls")
+            draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
             
-            # SKU: Centrado bajo el precio y un poco más arriba (relativo a punto_precio_y)
-            # Usamos anchor="mt" y ajustamos el eje X a 820
-            draw.text((eje_x_derecha, punto_precio_y + 45), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
+            draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
 
-            # --- POSICIONAMIENTO DE TEXTOS (LADO IZQUIERDO - AJUSTADOS) ---
+            # --- POSICIONAMIENTO DE TEXTOS (IZQUIERDA) ---
             cx = 200 
-
-            # Marca (Nivelada con el ras inferior del precio)
-            draw.text((cx, anchor_y_izq), row['Marca'], font=f_m, fill=txt_c, anchor="ls")
+            draw.text((cx, y_base_alineacion), row['Marca'], font=f_m, fill=txt_c, anchor="ls")
             
-            # Nombre del producto (Debajo de la Marca)
-            # width=25 asegura que el texto no invada el espacio del precio a la derecha
-            ny = anchor_y_izq + 15 # Pequeño margen para que no se pegue a la marca
+            ny = y_base_alineacion + 10 
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=25)[:2]
             for l in lineas_nombre:
                 draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="lt")
-                ny += 30 
+                ny += 30
 
             # --- CONFIGURACIÓN DE LEGALES ---
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 13)
