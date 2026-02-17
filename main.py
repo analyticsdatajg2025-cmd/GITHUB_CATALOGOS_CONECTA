@@ -75,7 +75,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     if not full_p: return None
     img = Image.open(full_p).convert("RGB"); draw = ImageDraw.Draw(img)
 
-   try:
+    try:
         # --- CARGA INICIAL DE FUENTES COMUNES ---
         f_f = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 24) # Fuente Fecha
         
