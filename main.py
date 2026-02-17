@@ -399,8 +399,14 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
 
 # --- BUCLE DE EJECUCIÓN PRINCIPAL ---
-data, res_sheet, viejos = get_sheets_data(); os.makedirs('output', exist_ok=True)
+data, res_sheet, viejos = get_sheets_data()
+
+# Asegurar que la carpeta exista y esté limpia para evitar errores de Git
+if not os.path.exists('output'):
+    os.makedirs('output')
+
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+archivos_generados = 0
 
 # Procesar productos individuales (Story, PPL, Display)
 for idx, row in data.iterrows():
@@ -410,7 +416,9 @@ for idx, row in data.iterrows():
         llave = f"{row['SKU']}_{f_v}_{c}".upper()
         if llave not in viejos:
             url = generar_diseno(row, c)
-            if url: res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+            if url: 
+                res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+                archivos_generados += 1
 
 # Procesar Flyers (Agrupados por ID_Flyer)
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
@@ -420,4 +428,14 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
         llave = f"{id_f}_FLYER_{c}".upper()
         if llave not in viejos:
             url = generar_diseno(group, c)
-            if url: res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+            if url: 
+                res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+                archivos_generados += 1
+
+# Mensaje de control para el log de GitHub Actions
+if archivos_generados == 0:
+    print("No se generaron archivos nuevos. Creando archivo dummy para evitar error de Git.")
+    with open("output/placeholder.txt", "w") as f:
+        f.write("No new images this run.")
+else:
+    print(f"Se generaron {archivos_generados} imágenes nuevas.")
