@@ -259,13 +259,13 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Bajamos y_precio de -115 a -105 para acercarlo al SKU
                 y_precio_efe = yp + box_h - 105
                 # Aumentamos scale a + 0.15 para que el preciador se vea más robusto
-                draw_efe_preciador(draw, cx_col2, y_precio_efe, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale + 0.25, padding_h=45)
+                draw_efe_preciador(draw, cx_col2, y_precio_efe, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale + 0.3, padding_h=30)
                 # SKU movido +8px a la derecha para centrarlo bajo el bloque de precio
                 draw.text((cx_col2 + 8, y_precio_efe + 50), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
             else:
                 # --- PRECIO IRRESISTIBLE ---
                 # Bajamos y_precio de -115 a -100 para que no esté tan separado del SKU
-                y_precio_irr = yp + box_h - 92
+                y_precio_irr = yp + box_h - 88
                 w_s = draw.textlength("S/", font=f_ps_fly)
                 w_num = draw.textlength(str(p['Precio desc']), font=f_pv_fly)
                 gap = 5
