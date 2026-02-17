@@ -397,46 +397,53 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     # Guardar y retornar URL
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{color_version}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
-
-# --- BUCLE DE EJECUCIÓN PRINCIPAL ---
-data, res_sheet, viejos = get_sheets_data(); os.makedirs('output', exist_ok=True)
-h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
-
 # --- BUCLE DE EJECUCIÓN PRINCIPAL ---
 data, res_sheet, viejos = get_sheets_data()
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
-archivos_generados = 0 # Contador indispensable
+archivos_generados = 0 
+
+print(f"DEBUG: Filas detectadas en el Excel: {len(data)}")
+print(f"DEBUG: Registros que ya estaban en la hoja de Resultados: {len(viejos)}")
 
 # Procesar productos individuales
 for idx, row in data.iterrows():
     f_v = str(row['Formato']).upper().strip()
     if f_v in ["FLYER", "", "0"]: continue
-    for c in (["AMARILLO", "AZUL"] if str(row['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]):
+    
+    versiones = ["AMARILLO", "AZUL"] if str(row['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
+    for c in versiones:
         llave = f"{row['SKU']}_{f_v}_{c}".upper()
+        
         if llave not in viejos:
+            print(f"🎨 Generando pieza nueva: {llave}") # Esto aparecerá en el log de GitHub
             url = generar_diseno(row, c)
             if url: 
                 res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
-                archivos_generados += 1 # Sumar cada vez que se guarda un archivo
+                archivos_generados += 1
+        else:
+            print(f"⏭️ Saltando {llave}: ya existe en Resultados.")
 
 # Procesar Flyers
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
 for id_f, group in fly_g.groupby('ID_Flyer'):
     if str(id_f) in ["0", "0.0", ""]: continue
-    for c in (["AZUL", "AMARILLO"] if str(group.iloc[0]['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]):
+    versiones = ["AZUL", "AMARILLO"] if str(group.iloc[0]['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
+    for c in versiones:
         llave = f"{id_f}_FLYER_{c}".upper()
         if llave not in viejos:
+            print(f"🎨 Generando Flyer nuevo: {llave}")
             url = generar_diseno(group, c)
             if url: 
                 res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
                 archivos_generados += 1
+        else:
+            print(f"⏭️ Saltando Flyer {llave}: ya existe en Resultados.")
 
 # --- SOLUCIÓN DEFINITIVA AL ERROR DE GIT ---
 if archivos_generados == 0:
-    print("No se generaron archivos nuevos.")
-    # Creamos el placeholder FUERA de la carpeta output
+    print("⚠️ No se generaron archivos nuevos. Revisa la hoja de Resultados.")
     with open("last_run.txt", "w") as f:
         f.write(f"Sin cambios: {h_lima}")
 else:
-    print(f"Éxito: Se crearon {archivos_generados} archivos en la carpeta output.")
+    print(f"✅ Éxito: Se crearon {archivos_generados} archivos en la carpeta 'output'.")
