@@ -23,6 +23,15 @@ jobs:
         run: |
           git config --global user.name "Elias-Martech-Bot"
           git config --global user.email "analytics.data.jg.2025@gmail.com"
+          
+          # 1. Traer cambios remotos para evitar el error de 'rejected'
+          git pull origin main --rebase
+          
+          # 2. Agregar los archivos de la carpeta output
           git add output/*
+          
+          # 3. Hacer el commit
           git commit -m "Auto-generación de piezas - $(date -u -d '5 hours ago' '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
-          git push
+          
+          # 4. Subir
+          git push origin main
