@@ -29,16 +29,19 @@ jobs:
           git config --global user.name "Elias-Martech-Bot"
           git config --global user.email "analytics.data.jg.2025@gmail.com"
           
-          # 1. Guardar temporalmente las imágenes creadas por el script
+          # 1. Agregamos todo lo que el script creó (fotos o placeholder)
+          git add .
+          
+          # 2. Guardamos eso en un 'stash' para limpiar el camino
           git stash
           
-          # 2. Sincronizar con el repositorio remoto
+          # 3. Bajamos lo último de GitHub
           git pull origin main --rebase
           
-          # 3. Recuperar las imágenes del guardado temporal
-          git stash pop || echo "No había archivos nuevos para recuperar"
+          # 4. Devolvemos las fotos/archivos
+          git stash pop || echo "No hay cambios"
           
-          # 4. Agregar, confirmar y subir cambios
-          git add output/*
+          # 5. Volvemos a agregar y subimos
+          git add .
           git commit -m "Auto-generación de piezas - $(date -d '5 hours ago' '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
           git push origin main

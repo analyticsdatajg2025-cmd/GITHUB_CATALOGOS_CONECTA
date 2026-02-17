@@ -432,10 +432,11 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
                 res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
                 archivos_generados += 1
 
-# --- SOLUCIÓN AL ERROR FATAL DE GIT ---
+# --- SOLUCIÓN DEFINITIVA AL ERROR DE GIT ---
 if archivos_generados == 0:
-    print("No se generaron archivos nuevos. Creando placeholder para evitar error de Git.")
-    with open("output/placeholder.txt", "w") as f:
-        f.write(f"Sin cambios en esta ejecución: {h_lima}")
+    print("No se generaron archivos nuevos.")
+    # Creamos el placeholder FUERA de la carpeta output
+    with open("last_run.txt", "w") as f:
+        f.write(f"Sin cambios: {h_lima}")
 else:
-    print(f"Éxito: Se crearon {archivos_generados} archivos.")
+    print(f"Éxito: Se crearon {archivos_generados} archivos en la carpeta output.")
