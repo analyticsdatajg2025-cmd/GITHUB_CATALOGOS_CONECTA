@@ -19,31 +19,45 @@ def quitar_fondo_blanco(img):
 
 def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing=5, prefix_width=0):
     available_w = x_end - x_start
-    # Ajustamos el ancho de envoltura para Display (que suele ser pequeño)
+    # Ajuste dinámico de envoltura según el ancho del contenedor
     wrap_width = 45 if available_w < 500 else 110 
     lines = textwrap.wrap(text, width=wrap_width)
     
     y = y_start
+    # Medimos cuánto mide un espacio normal en la fuente elegida
+    normal_space_w = draw.textlength(" ", font=font)
+    
     for i, line in enumerate(lines):
         words = line.split()
-        # Si es la primera línea, le restamos el ancho del prefijo en negrita
+        if not words: continue
+
+        # Ajuste inicial para la primera línea si existe un prefijo (ej. "CONDICIONES GENERALES")
         current_x_start = x_start + (prefix_width if i == 0 else 0)
         current_available_w = available_w - (prefix_width if i == 0 else 0)
         
-        if i == len(lines) - 1 or len(words) <= 1:
-            # ÚLTIMA LÍNEA o línea de una sola palabra: Alineada a la izquierda
+        # --- CÁLCULO DE JUSTIFICACIÓN ---
+        total_text_w = sum(draw.textlength(w, font=font) for w in words)
+        num_gaps = len(words) - 1
+        
+        # Calculamos el ancho de espacio necesario para justificar
+        target_space_w = (current_available_w - total_text_w) / num_gaps if num_gaps > 0 else 0
+        
+        # CONDICIÓN DE SEGURIDAD PARA ALINEAR A LA IZQUIERDA:
+        # 1. Es la última línea del párrafo.
+        # 2. Solo hay una palabra en la línea.
+        # 3. El espacio necesario es más de 2.5 veces el normal (evita huecos feos).
+        if i == len(lines) - 1 or len(words) <= 1 or target_space_w > (normal_space_w * 2.5):
             draw.text((current_x_start, y), line, font=font, fill=fill)
         else:
-            # LÍNEAS INTERMEDIAS: Justificadas
-            total_w = sum(draw.textlength(w, font=font) for w in words)
-            space_width = (current_available_w - total_w) / (len(words) - 1)
+            # LÍNEAS INTERMEDIAS CON ESPACIADO RAZONABLE: Justificamos
             curr_x = current_x_start
             for word in words:
                 draw.text((curr_x, y), word, font=font, fill=fill)
-                curr_x += draw.textlength(word, font=font) + space_width
+                curr_x += draw.textlength(word, font=font) + target_space_w
         
+        # Salto de línea dinámico según el alto de la fuente
         y += font.getbbox("Ay")[3] + line_spacing
-
+        
 def get_sheets_data():
     """Conexión con Google Sheets para traer datos de productos."""
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -113,42 +127,53 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         # Aseguramos que todas las variables existan en caso de error de carga
         f_m = f_p = f_pv = f_ps = f_s_ind = f_s_fly = f_f = f_l = ImageFont.load_default()
         
-    # --- LÓGICA DE POSICIONAMIENTO FLYER (Múltiples productos) ---
+# --- LÓGICA DE POSICIONAMIENTO FLYER (Múltiples productos) ---
     if formato == "FLYER":
-        # 1. Fecha con margen x=64
+        # 1. Fecha (Margen x=64)
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
         wf = draw.textlength(f_txt, font=f_f)
         x_fecha = 64 
         draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=accent_date, width=3)
         draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=accent_date, anchor="mm")
         
-        # 2. Configuración de Cuadrícula
-        box_w, box_h = 456, 456 
-        # Si hay 8 productos, pegamos más las cajas verticalmente (gap=5) para no mover los legales
-        gap_y = 5 if len(data_input) > 6 else 30 
+        # 2. Configuración de Cuadrícula DINÁMICA
+        num_productos = len(data_input)
         
+        # MEDIDAS ORIGINALES PARA 6 PRODUCTOS (Tus medidas)
+        if num_productos <= 6:
+            box_w, box_h = 456, 456
+            img_size = 338
+            gap_y = 30
+            y_offset_img = 20
+        # AJUSTE EXCLUSIVO PARA 8 PRODUCTOS PARA QUE NO PISEN LEGALES
+        else:
+            box_w, box_h = 456, 375  # Reducimos alto de caja
+            img_size = 250           # Reducimos imagen para ganar espacio
+            gap_y = 15               # Espacio entre cuadros más compacto
+            y_offset_img = 10
+
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
-            # xp: Margen 64 + (columna * (ancho + separación de 40px))
-            # yp: Inicio 320 + (fila * (alto + gap))
-            xp, yp = 64+(i%2)*(box_w+40), 320+(i//2)*(box_h+gap_y)
             
-            # Dibujar Caja 456x456
+            xp = 64 + (i % 2) * (box_w + 40)
+            yp = 320 + (i // 2) * (box_h + gap_y)
+            
+            # Dibujar Caja
             draw.rounded_rectangle([xp, yp, xp+box_w, yp+box_h], radius=15, fill=(255,255,255), outline=border_c, width=2)
             
-            # Imagen del producto (338x338)
+            # Imagen del producto (Escalada según el caso)
             try:
                 pi_url = p['Foto del producto calado']
                 pi = Image.open(BytesIO(requests.get(pi_url).content)).convert("RGBA")
-                pi = pi.resize((338, 338), Image.Resampling.LANCZOS)
-                # Centrado horizontal manual: xp + (456 - 338)/2 = 59
-                img.paste(pi, (int(xp+59), int(yp+20)), pi)
+                pi.thumbnail((img_size, img_size), Image.Resampling.LANCZOS)
+                # Centrado horizontal dinámico
+                img.paste(pi, (int(xp + (box_w - pi.width) // 2), int(yp + y_offset_img)), pi)
             except: pass
             
-            # Ejes para textos dentro de la caja
+            # Ejes para textos
             cl, cr = xp + 114, xp + 342
             
-            # Marca y Nombre: Bajar posición 14px (yp + box_h - 100 + 14 = -86)
+            # Marca y Nombre (Posición relativa al fondo de la caja actual)
             y_marca_prod = yp + box_h - 86 
             f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20 if len(p['Marca']) < 12 else 16)
             draw.text((cl, y_marca_prod), p['Marca'], font=f_m_fly, fill=(0,0,0), anchor="mm")
@@ -158,41 +183,26 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((cl, ny), ln, font=f_p, fill=(0,0,0), anchor="mm")
                 ny += 20
             
-            # Precio: Aumentar "y" en 18px (yp + box_h - 75 + 18 = -57)
+            # Precio y SKU (Posición relativa al fondo de la caja actual)
             y_precio = yp + box_h - 57
             p_val = str(p['Precio desc'])
-            # Centrado del bloque "S/ Valor"
             tw_p = draw.textlength("S/", font=f_ps) + draw.textlength(p_val, font=f_pv) + 8
             px_inicio = cr - tw_p // 2
             
             draw.text((px_inicio, y_precio), "S/", font=f_ps, fill=(0,0,0), anchor="lm")
             draw.text((px_inicio + draw.textlength("S/", font=f_ps) + 8, y_precio), p_val, font=f_pv, fill=(0,0,0), anchor="lm")
             
-            # SKU: Subir 10px (-10) y Centrar bajo el precio (cr)
-            # Originalmente estaba en +45, ahora +35 para que suba
             draw.text((cr, y_precio + 35), str(p['SKU']), font=f_s_fly, fill=(110,110,110), anchor="mm")
             
-        # 3. Legales Fijos (Se quedan en 1840 para 6 u 8 productos)
+        # 3. Legales Fijos (Se quedan en 1840)
         y_legales_fijo = 1840 
-        # Definimos la negrita aquí porque no estaba en el try global
         f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16)
-        
         tit_legal = "CONDICIONES GENERALES: "
         cuerpo_legal = str(row['Legales'])
         ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
         
         draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=txt_c)
-        draw_justified_text(
-            draw, 
-            cuerpo_legal, 
-            f_l, 
-            y_legales_fijo, 
-            64, 
-            1016, # 1080 - 64
-            txt_c, 
-            line_spacing=2, 
-            prefix_width=ancho_negrita
-        )
+        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, txt_c, line_spacing=2, prefix_width=ancho_negrita)
 
     # --- LÓGICA DE POSICIONAMIENTO FORMATOS INDIVIDUALES ---
     else:
@@ -202,7 +212,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             # --- CONFIGURACIÓN DE IMAGEN ---
             # Tamaño 473px, x=123, y=25
             pi.thumbnail((473, 473))
-            img.paste(pi, (123, 25), pi) 
+            img.paste(pi, (423, 25), pi) 
 
             # --- POSICIONAMIENTO DE TEXTOS (Marca, Nombre, Precio, SKU) ---
             # Centros ajustados: -10px en X, +10px en Y
@@ -218,7 +228,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 ny += 27 
 
             # Precio desc
-            tw = draw.textlength("S/ ", font=f_ps) + draw.textlength(str(row['Precio desc']), font=f_pv) + 15
+            tw = draw.textlength("S/", font=f_ps) + draw.textlength(str(row['Precio desc']), font=f_pv) + 15
             px = cx - tw//2
             draw.text((px, ny + 55), "S/ ", font=f_ps, fill=txt_c, anchor="lm")
             draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, ny + 55), str(row['Precio desc']), font=f_pv, fill=txt_c, anchor="lm")
@@ -241,18 +251,17 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             # Usamos prefix_width para que la primera línea empiece después de la negrita
             draw_justified_text(
                 draw, cuerpo_legal, f_l, 
-                y_start=489, x_start=40, x_end=1040, 
+                y_start=489, x_start=40, x_end=960, 
                 fill=txt_c, line_spacing=2, prefix_width=ancho_negrita
             )  
         
         elif formato == "STORY":
             # --- CONFIGURACIÓN DE IMAGEN ---
-            # Tamaño 805x805, Posición x=140, y=830
+            # Se mantiene el tamaño y posición solicitada
             pi = pi.resize((805, 805), Image.Resampling.LANCZOS)
-            img.paste(pi, (140, 830), pi)
+            img.paste(pi, (140, 630), pi)
 
             # --- POSICIONAMIENTO DE TEXTOS (MARCA Y PRODUCTO) ---
-            # Margen x=150. Posición y original (1430) + 52px = 1482
             cx_textos = 150 
             anchor_y_textos = 1482 
 
@@ -260,33 +269,39 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt")
             
             # --- LÓGICA DE NOMBRE DEL PRODUCTO (MÁXIMO 2 FILAS) ---
-            # width=25 es el límite de caracteres antes de saltar de fila
+            # Reducimos width a 22 para asegurar un margen límite y que no choque con el precio
             ny = anchor_y_textos + 65 
-            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=25)[:2]
+            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
             for l in lineas_nombre:
                 draw.text((cx_textos, ny), l, font=f_p, fill=txt_c, anchor="lt")
-                ny += 40 # Espacio entre la primera y segunda fila del nombre
+                ny += 40 
 
             # --- POSICIONAMIENTO DE PRECIO ---
-            # Posición y original (1430) + 86px = 1516
-            anchor_y_precio = 1516 
+            # Bajamos ambos 10px: 1516 + 10 = 1526
+            anchor_y_precio = 1526 
             
             p_v = str(row['Precio desc'])
-            # Calculamos ancho para centrar el bloque de precio en el eje x=810
-            # Aumentamos un poco la separación a 45px por el aumento de tamaño de fuente
-            tw = draw.textlength("S/ ", font=f_ps) + draw.textlength(p_v, font=f_pv) + 45
-            px_precio = 810 - tw//2
+            # Aumentamos la separación entre S/ y el número a 60px
+            espacio_entre_simbolo = 60
+            tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo
             
-            # Dibujamos S/ y Precio nivelados en 1516
-            draw.text((px_precio, anchor_y_precio), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
-            draw.text((px_precio + draw.textlength("S/ ", font=f_ps) + 45, anchor_y_precio), p_v, font=f_pv, fill=txt_c, anchor="mm")
+            # Calculamos el punto de inicio para que el conjunto esté centrado en el eje x=810
+            px_bloque_completo = 810 - tw//2
+            
+            # Dibujamos el S/ y el Precio al mismo ras (anchor "ls" -> Left Baseline)
+            # Esto corrige que el S/ se vea más arriba que el número
+            draw.text((px_bloque_completo, anchor_y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls")
+            
+            # Calculamos la posición X del número sumando el símbolo y el nuevo espacio
+            px_numero = px_bloque_completo + draw.textlength("S/", font=f_ps) + espacio_entre_simbolo
+            draw.text((px_numero, anchor_y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
 
             # --- SKU ---
-            # Se posiciona 85px por debajo del centro del precio para evitar que choquen
-            draw.text((810, anchor_y_precio + 85), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") 
+            # Centrado exactamente debajo del bloque de precio (Eje 810)
+            # Bajamos la posición para que no se pegue al precio (anchor_y_precio + 60)
+            draw.text((810, anchor_y_precio + 60), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
 
-            # --- CONFIGURACIÓN DE LEGALES ---
-            # Posición y original (1845) - 43px = 1802. Margen x=65.
+            # --- CONFIGURACIÓN DE LEGALES (Se mantiene igual) ---
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 14)
             tit_legal = "CONDICIONES GENERALES: "
             cuerpo_legal = str(row['Legales'])
@@ -295,57 +310,51 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((65, 1802), tit_legal, font=f_l_bold, fill=txt_c)
 
             draw_justified_text(
-                draw, 
-                cuerpo_legal, 
-                f_l, 
-                y_start=1802, 
-                x_start=65, 
-                x_end=1015, # Margen derecho de 65px (1080 - 65)
-                fill=txt_c, 
-                line_spacing=2,
-                prefix_width=ancho_negrita
+                draw, cuerpo_legal, f_l, 
+                y_start=1802, x_start=65, x_end=1015, 
+                fill=txt_c, line_spacing=2, prefix_width=ancho_negrita
             )
-
+    
         elif formato == "PPL":
-            # --- CONFIGURACIÓN DE IMAGEN ---
-            # Nueva medida: 747 ancho x 270 alto. Posición x=126, y=236
-            # Nota: Usamos resize en lugar de thumbnail para forzar la medida exacta pedida
-            pi = pi.resize((747, 550), Image.Resampling.LANCZOS)
+            # --- CONFIGURACIÓN DE IMAGEN (SIN DEFORMACIÓN) ---
+            # Usamos thumbnail para mantener la proporción original del producto
+            # El área máxima permitida será 747x550
+            pi.thumbnail((747, 550), Image.Resampling.LANCZOS)
+            # Centramos la imagen horizontalmente en x=126
             img.paste(pi, (126, 236), pi)
 
-            # --- POSICIONAMIENTO DE TEXTOS ---
-            # x=200 para Marca y Producto. 
-            # anchor_y original era 780, aumentamos 70px -> 850
+            # --- POSICIONAMIENTO DE TEXTOS (LADO IZQUIERDO) ---
             cx = 200 
-            anchor_y = 850 
+            anchor_y = 750 # Subimos el inicio de los textos para dar aire abajo
 
-            # Marca (Alineado a la izquierda según x=200)
+            # Marca: anchor "lt" (Left Top)
             draw.text((cx, anchor_y), row['Marca'], font=f_m, fill=txt_c, anchor="lt")
             
-            # Nombre del producto (Máximo 2 filas)
-            # Calculamos dinámicamente cuánto espacio ocupa para bajar lo demás
-            ny = anchor_y + 10 # Pequeño margen después de la marca
-            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=40)[:2]
+            # Nombre del producto: Máximo 2 filas
+            # Reducimos 'width' a 28 para que el texto salte antes de chocar con el precio
+            ny = anchor_y + 60 # Espacio suficiente después de la Marca
+            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=28)[:2]
             for l in lineas_nombre:
                 draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="lt")
-                ny += 30 # Salto entre líneas de producto
+                ny += 35 # Salto entre líneas de producto
             
-            # El precio y SKU se posicionan RELATIVOS a donde terminó el nombre (ny)
-            # para evitar superposición si hay 1 o 2 líneas.
-            punto_precio_y = ny + 60 
+            # --- POSICIONAMIENTO DE PRECIO Y SKU (LADO DERECHO - NIVELADO) ---
+            # Usamos una altura fija nivelada con el bloque de texto (anchor_y + margen)
+            punto_precio_y = anchor_y + 80 
             
             p_v = str(row['Precio desc'])
-            tw = draw.textlength("S/ ", font=f_ps) + draw.textlength(p_v, font=f_pv) + 80
-            # Mantengo el bloque de precio centrado respecto a un eje derecho o x=735
-            # o puedes cambiarlo a cx si lo quieres todo a la izquierda.
-            px = 735 - tw//2
-            draw.text((px, punto_precio_y), "S/ ", font=f_ps, fill=txt_c, anchor="mm")
-            draw.text((px + draw.textlength("S/ ", font=f_ps) + 80, punto_precio_y), p_v, font=f_pv, fill=txt_c, anchor="mm")
+            # Reducimos la separación entre S/ y el monto a 40px para que se vea más unido
+            tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + 40
+            px = 820 - tw//2 # Ajustamos el centro del precio un poco más a la derecha
             
-            draw.text((735, punto_precio_y + 60), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") 
+            # Dibujamos el precio centrado en su propia columna
+            draw.text((px, punto_precio_y), "S/", font=f_ps, fill=txt_c, anchor="mm")
+            draw.text((px + draw.textlength("S/", font=f_ps) + 40, punto_precio_y), p_v, font=f_pv, fill=txt_c, anchor="mm")
+            
+            # SKU centrado debajo del precio
+            draw.text((820, punto_precio_y + 70), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mm") 
 
-            # --- CONFIGURACIÓN DE LEGALES ---
-            # Original y=950, bajamos 40px -> 990. Margen x=50.
+            # --- CONFIGURACIÓN DE LEGALES (SE MANTIENE IGUAL) ---
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 13)
             tit_legal = "CONDICIONES GENERALES: "
             cuerpo_legal = str(row['Legales'])
@@ -354,15 +363,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((50, 990), tit_legal, font=f_l_bold, fill=txt_c)
 
             draw_justified_text(
-                draw, 
-                cuerpo_legal, 
-                f_l, 
-                y_start=990, 
-                x_start=50, 
-                x_end=1030, # 1080 - 50px de margen
-                fill=txt_c, 
-                line_spacing=2, # Interlineado bajo
-                prefix_width=ancho_negrita
+                draw, cuerpo_legal, f_l, 
+                y_start=990, x_start=50, x_end=1030, 
+                fill=txt_c, line_spacing=2, prefix_width=ancho_negrita
             )
 
     # Guardar y retornar URL
