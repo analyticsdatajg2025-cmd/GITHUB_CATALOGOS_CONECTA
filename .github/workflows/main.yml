@@ -1,4 +1,5 @@
 name: Catalogo Conecta Automation
+
 on:
   schedule:
     - cron: "0 13 * * *" # 8:00 AM hora de Lima
@@ -9,29 +10,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+
       - name: Deps
         run: pip install Pillow pandas gspread oauth2client requests
+
       - name: Run Script
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: python main.py
+
       - name: Push Designs
         run: |
           git config --global user.name "Elias-Martech-Bot"
           git config --global user.email "analytics.data.jg.2025@gmail.com"
           
-          # 1. Traer cambios remotos para evitar el error de 'rejected'
+          # 1. Guardar temporalmente las imágenes creadas por el script
+          git stash
+          
+          # 2. Sincronizar con el repositorio remoto
           git pull origin main --rebase
           
-          # 2. Agregar los archivos de la carpeta output
+          # 3. Recuperar las imágenes del guardado temporal
+          git stash pop || echo "No había archivos nuevos para recuperar"
+          
+          # 4. Agregar, confirmar y subir cambios
           git add output/*
-          
-          # 3. Hacer el commit
-          git commit -m "Auto-generación de piezas - $(date -u -d '5 hours ago' '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
-          
-          # 4. Subir
+          git commit -m "Auto-generación de piezas - $(date -d '5 hours ago' '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
           git push origin main
