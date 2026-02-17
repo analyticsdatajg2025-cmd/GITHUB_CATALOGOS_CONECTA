@@ -257,11 +257,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             # 2. Precio y SKU (A ras y solo valor)
             f_pv_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 53)
             f_ps_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 30)
-            y_precio = yp + box_h - 85 
+            y_precio = yp + box_h - 115
             
             if "EFERTON" in tipo:
-                draw_efe_preciador(draw, cx_col2, y_precio, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale, padding_h=25)
-                draw.text((cx_col2, y_precio + 45), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
+                draw_efe_preciador(draw, cx_col2, y_precio, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale + 0.1, padding_h=35)
+                draw.text((cx_col2, y_precio + 55), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
             else:
                 # --- PRECIO IRRESISTIBLE ---
                 # 1. Mantenemos tu lógica de dibujo de precio tal cual (alineado a la izquierda)
@@ -279,7 +279,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 
                 # 2. AJUSTE DEL SKU: Para que esté justo debajo del centro del precio
                 # Usamos cx_col2 con anchor "mm" para que se alinee con el eje central del bloque de arriba
-                draw.text((cx_col2, y_precio + 35), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
+                draw.text((cx_col2, y_precio + 45), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")            
             
             # Divisores
             line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
@@ -369,7 +369,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Legales Irresistible: Margen 73px (X_ini=73, X_fin=927), Y=937
                 draw_justified_text(draw, str(row['Legales']), f_l, 998, 73, 1007, (255,255,255), line_spacing_offset=0, force_justify=True)
 
-# --- FORMATO: STORY (9:16 - Ajustes Eferton e Irresistible) ---
+        # --- FORMATO: STORY (9:16 - Ajustes Eferton e Irresistible) ---
         elif formato == "STORY":
             # 1. LÓGICA PARA EFERTON
             if "EFERTON" in tipo:
@@ -381,24 +381,26 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((239, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
                 
                 # Nombre del producto: Dinámico hasta 2 líneas
-                lines_prod = textwrap.wrap(row['Nombre del producto'], width=25)
+                lines_prod = textwrap.wrap(row['Nombre del producto'], width=20)
                 ny = ay + 55
                 for lp in lines_prod[:2]:
                     draw.text((239, ny), lp, font=f_p, fill=(255,255,255), anchor="ls")
-                    ny += 45 # Salto entre líneas del nombre
+                    ny += 45 
                 
-                # SKU dinámico: Se posiciona debajo de la última línea del nombre
+                # SKU dinámico
                 y_sku = ny + 5
                 draw.text((239, y_sku), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
                 
-                # PRECIO EFERTON A RAS
+                # --- PRECIO EFERTON CON PRECIADOR NARANJA ---
                 f_pv_efe = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110)
                 f_ps_efe = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64)
-                
-                py_efe = 1655 # Base común para ambos
-                draw.text((613, py_efe), "S/", font=f_ps_efe, fill=(255,255,255), anchor="ls")
-                w_s = draw.textlength("S/", font=f_ps_efe)
-                draw.text((613 + w_s + 12, py_efe), str(row['Precio desc']), font=f_pv_efe, fill=(255,255,255), anchor="ls")
+
+                # Usamos X=780 para centrar el bloque naranja en el espacio derecho
+                px_story = 780
+                py_story = 1655
+
+                # Solo llamamos a la función (eliminamos el dibujo de texto manual que tenías después)
+                draw_efe_preciador(draw, px_story, py_story, "S/", str(row['Precio desc']), f_ps_efe, f_pv_efe, scale=1.1, padding_h=30)
                 
                 # Legales Eferton
                 f_l_story = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
@@ -427,11 +429,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 f_s_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 29)
                 draw.text((lx, y_sku), str(row['SKU']), font=f_s_irr, fill=(255,255,255), anchor="ls")
                 
-                # PRECIO IRRESISTIBLE A RAS
+                # PRECIO IRRESISTIBLE A RAS (Este se mantiene como texto blanco)
                 f_pv_irr = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 128)
                 f_ps_irr = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 71)
                 
-                py_irr = 1658 # Base común para ambos
+                py_irr = 1658 
                 draw.text((566, py_irr), "S/", font=f_ps_irr, fill=(255,255,255), anchor="ls")
                 w_s_irr = draw.textlength("S/", font=f_ps_irr)
                 draw.text((566 + w_s_irr + 15, py_irr), str(row['Precio desc']), font=f_pv_irr, fill=(255,255,255), anchor="ls")
@@ -439,7 +441,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Legales Irresistible
                 f_l_story = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
                 draw_justified_text(draw, str(row['Legales']), f_l_story, 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
-
 # --- FORMATO: DISPLAY (Ajustes Eferton e Irresistible) ---
         elif formato == "DISPLAY":
             # 1. LÓGICA PARA EFERTON
