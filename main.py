@@ -215,7 +215,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((cr, y_precio + 35), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
             
         # 3. Legales Fijos
-        y_legales_fijo = 1810 
+        y_legales_fijo = 1815 
         f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16)
         tit_legal = "CONDICIONES GENERALES: "
         cuerpo_legal = str(row['Legales'])
@@ -266,7 +266,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
 
             # Dibujamos el título en negrita
-            draw.text((40, 489), tit_legal, font=f_l_bold, fill=txt_c)
+            draw.text((40, 485), tit_legal, font=f_l_bold, fill=txt_c)
 
             # Llamamos a la función para el cuerpo del texto legal
             # Usamos prefix_width para que la primera línea empiece después de la negrita

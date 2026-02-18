@@ -215,7 +215,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((cr, y_precio + 35), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
             
         # 3. Legales Fijos
-        y_legales_fijo = 1840 
+        y_legales_fijo = 1815 
         f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16)
         tit_legal = "CONDICIONES GENERALES: "
         cuerpo_legal = str(row['Legales'])
@@ -232,7 +232,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "DISPLAY":
             # --- CONFIGURACIÓN DE IMAGEN ---
             # Tamaño 473px, x=123, y=25
-            pi.thumbnail((473, 473))
+            pi.thumbnail((483, 483))
             img.paste(pi, (423, 25), pi) 
 
             # --- POSICIONAMIENTO DE TEXTOS (Marca, Nombre, Precio, SKU) ---
@@ -266,19 +266,19 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
 
             # Dibujamos el título en negrita
-            draw.text((40, 489), tit_legal, font=f_l_bold, fill=txt_c)
+            draw.text((40, 485), tit_legal, font=f_l_bold, fill=txt_c)
 
             # Llamamos a la función para el cuerpo del texto legal
             # Usamos prefix_width para que la primera línea empiece después de la negrita
             draw_justified_text(
                 draw, cuerpo_legal, f_l, 
-                y_start=489, x_start=40, x_end=960, 
+                y_start=485, x_start=40, x_end=960, 
                 fill=txt_c, line_spacing=2, prefix_width=ancho_negrita
             )  
         
         elif formato == "STORY":
             # --- CONFIGURACIÓN DE IMAGEN ---
-            pi = pi.resize((805, 805), Image.Resampling.LANCZOS)
+            pi = pi.resize((845, 845), Image.Resampling.LANCZOS)
             img.paste(pi, (140, 630), pi)
 
             # --- POSICIONAMIENTO DE TEXTOS (MARCA Y PRODUCTO) ---
@@ -335,7 +335,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "PPL":
             # --- CONFIGURACIÓN DE IMAGEN ---
             # El área máxima permitida sigue siendo 747x550
-            pi.thumbnail((747, 550), Image.Resampling.LANCZOS)
+            pi.thumbnail((847, 650), Image.Resampling.LANCZOS)
             
             # --- CÁLCULO DE CENTRADO DINÁMICO ---
             # Ancho del lienzo (PPL suele ser 1080)
@@ -345,7 +345,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             px_centrado = (canvas_width - pi.width) // 2
             
             # Subimos la posición Y de 236 a 180 para dar más aire abajo
-            py_posicion = 180
+            py_posicion = 220
             
             # Pegamos la imagen con el nuevo centro
             img.paste(pi, (px_centrado, py_posicion), pi)
