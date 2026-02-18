@@ -300,8 +300,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "PPL":
             if "EFERTON" in tipo:
                 # 1. IMAGEN: X=126, Y=269, Tamaño 747x270
-                pi.thumbnail((757, 780))
-                img.paste(pi, (126, 245), pi)
+                pi.thumbnail((787, 810))
+                img.paste(pi, (126, 205), pi)
                 
                 # --- COLUMNAS IMAGINARIAS (Y base ajustada con los +70, +52, +80) ---
                 
@@ -329,7 +329,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             else: 
                 # --- PPL PRECIO IRRESISTIBLE ---
                 # Imagen: 622px, X=290, Y=287
-                pi.thumbnail((652, 652))
+                pi.thumbnail((682, 682))
                 img.paste(pi, (310, 287), pi)
                 
                 lx = 91 # Margen izquierdo para textos
@@ -341,7 +341,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Nombre del producto: Tamaño 26pts, X=91, Máximo hasta X=290
                 f_p_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26)
                 # Wrap ajustado para no pasar del ancho solicitado (aprox 15-18 caracteres)
-                lines_prod = textwrap.wrap(row['Nombre del producto'], width=15)
+                lines_prod = textwrap.wrap(row['Nombre del producto'], width=13)
                 ny = 675 
                 for lp in lines_prod[:2]:
                     draw.text((lx, ny), lp, font=f_p_irr, fill=(255,255,255), anchor="ls")
@@ -370,7 +370,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "STORY":
             # 1. LÓGICA PARA EFERTON
             if "EFERTON" in tipo:
-                pi.thumbnail((946, 946))
+                pi.thumbnail((956, 956))
                 img.paste(pi, (72, 606), pi)
                 
                 ay = 1600 
@@ -405,8 +405,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
             # 2. LÓGICA PARA IRRESISTIBLE
             else:
-                pi.thumbnail((925, 925))
-                img.paste(pi, (78, 590), pi)
+                pi.thumbnail((935, 935))
+                img.paste(pi, (78, 580), pi)
                 
                 lx = 147 
                 # Marca
@@ -443,8 +443,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             # 1. LÓGICA PARA EFERTON
             if "EFERTON" in tipo:
                 # Imagen: 463px, Y=25, X=440
-                pi.thumbnail((470, 470))
-                img.paste(pi, (440, 25), pi)
+                pi.thumbnail((490, 490))
+                img.paste(pi, (430, 25), pi)
                 
                 cx = 260 # Centro para Eferton
                 # Usamos el f_m definido arriba pero le restamos 2 al tamaño
@@ -466,7 +466,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             # 2. LÓGICA PARA IRRESISTIBLE (DISPLAY)
             else:
                 # Imagen: 465px, Y=24, X=412
-                pi.thumbnail((475, 455))
+                pi.thumbnail((485, 465))
                 img.paste(pi, (412, 24), pi)
                 
                 lx = 91 # Margen izquierdo
