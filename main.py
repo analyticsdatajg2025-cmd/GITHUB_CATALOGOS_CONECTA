@@ -312,7 +312,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 f_s_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22)
                 
                 # Procesamos el nombre (ancho de 30 para que use bien el espacio central)
-                lineas_nombre = textwrap.wrap(str(row['Nombre del producto']), width=30)
+                lineas_nombre = textwrap.wrap(str(row['Nombre del producto']), width=22)
                 
                 # El nombre empezaba originalmente en 900 (anchor mm)
                 # Si hay más filas, subimos el inicio un poco para que no choque con legales
