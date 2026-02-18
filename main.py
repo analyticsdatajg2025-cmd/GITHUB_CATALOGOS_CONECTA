@@ -299,73 +299,81 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         # --- FORMATO: PPL (Post / Pieza Principal) ---
         if formato == "PPL":
             if "EFERTON" in tipo:
-                # 1. IMAGEN: X=126, Y=269, Tamaño 747x270
+                # 1. IMAGEN
                 pi.thumbnail((797, 820))
                 img.paste(pi, (126, 175), pi)
                 
-                # --- COLUMNAS IMAGINARIAS (Y base ajustada con los +70, +52, +80) ---
-                
-                # COLUMNA 1: MARCA (Comienza en X=90, Y=900)
-                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30) # -2pts de los 32 originales
+                # COLUMNA 1: MARCA
+                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
                 draw.text((90, 930), row['Marca'], font=f_m_efe, fill=(255,255,255), anchor="ls")
                 
-                # COLUMNA 2: NOMBRE Y SKU (Centro del banner X=500, pero bajados)
-                # Nombre: 830 + 15 (original) + 52 (pedido) = 897 
+                # COLUMNA 2: NOMBRE Y SKU (Dinámico)
                 f_p_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25)
-                draw.text((500, 900), row['Nombre del producto'][:25], font=f_p_efe, fill=(255,255,255), anchor="mm")
-                
-                # SKU: 830 + 55 (original) + 52 (pedido) = 937
                 f_s_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22)
-                draw.text((500, 935), str(row['SKU']), font=f_s_efe, fill=(255,255,255), anchor="mm")
                 
-                # COLUMNA 3: PRECIO (X=840, Y=910)
-                # 830 + 80 (pedido) = 910. El "S/" se alinea solo dentro de la función del preciador.
+                # Procesamos el nombre (ancho de 30 para que use bien el espacio central)
+                lineas_nombre = textwrap.wrap(str(row['Nombre del producto']), width=30)
+                
+                # El nombre empezaba originalmente en 900 (anchor mm)
+                # Si hay más filas, subimos el inicio un poco para que no choque con legales
+                ny = 890 if len(lineas_nombre) > 1 else 900
+                
+                for line in lineas_nombre[:3]: # Permitimos hasta 3 filas
+                    draw.text((500, ny), line, font=f_p_efe, fill=(255,255,255), anchor="mm")
+                    ny += 28 # Espaciado entre líneas del nombre
+                
+                # El SKU se posiciona relativo al final del nombre
+                # Antes estaba fijo en 935, ahora es dinámico
+                y_sku = ny + 5
+                draw.text((500, y_sku), str(row['SKU']), font=f_s_efe, fill=(255,255,255), anchor="mm")
+                
+                # COLUMNA 3: PRECIO (Fijo para mantener alineación con Marca)
                 draw_efe_preciador(draw, 840, 910, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.0, tracking=-3)
                 
-                # LEGALES: Y=998 (980+18), Margen 90px (X_ini=90, X_fin=910)
-                # force_justify=False para que no se vea tan separado
+                # LEGALES: Fijos en 998
                 draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 990, (255,255,255), line_spacing_offset=0, force_justify=True)
-                
             else: 
                 # --- PPL PRECIO IRRESISTIBLE ---
-                # Imagen: 622px, X=290, Y=287
+                # Imagen
                 pi.thumbnail((682, 682))
                 img.paste(pi, (310, 287), pi)
                 
                 lx = 91 # Margen izquierdo para textos
                 
-                # Marca: Y=639, Tamaño 30pts
+                # Marca: Fija en Y=639
                 f_m_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
                 draw.text((lx, 639), row['Marca'], font=f_m_irr, fill=(255,255,255), anchor="ls")
                 
-                # Nombre del producto: Tamaño 26pts, X=91, Máximo hasta X=290
+                # Nombre del producto: Dinámico hasta 4 filas
                 f_p_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26)
-                # Wrap ajustado para no pasar del ancho solicitado (aprox 15-18 caracteres)
                 lines_prod = textwrap.wrap(row['Nombre del producto'], width=13)
+                
                 ny = 675 
                 for lp in lines_prod[:4]:
                     draw.text((lx, ny), lp, font=f_p_irr, fill=(255,255,255), anchor="ls")
-                    ny += 30
+                    ny += 30 # Salto de línea
                 
-                # SKU: Tamaño 20pts
+                # SKU: Se posiciona relativo al final del nombre
                 f_s_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 20)
-                draw.text((lx, ny + 10), str(row['SKU']), font=f_s_irr, fill=(255,255,255), anchor="ls")
+                y_sku = ny + 10
+                draw.text((lx, y_sku), str(row['SKU']), font=f_s_irr, fill=(255,255,255), anchor="ls")
                 
-                # Precio: S/ 44pts, Precio 80pts (ExtraBold)
+                # PRECIO DINÁMICO: S/ 44pts, Precio 80pts
                 f_pv80 = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 80)
                 f_ps44 = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 44)
                 
-                # Alineación al ras (py=830) para que el símbolo y el precio asienten en la misma base
-                py = 830 
-                w_s = draw.textlength("S/", font=f_ps44)
+                # LÓGICA DE SEGURIDAD: 
+                # El precio base es 830, pero si el SKU baja mucho, el precio baja con él
+                # (dejamos 80px de margen entre el SKU y la base del precio)
+                py = max(830, y_sku + 80) 
                 
-                # Dibujamos S/ y Precio usando la misma coordenada 'py' y anchor 'ls'
+                w_s = draw.textlength("S/", font=f_ps44)
                 draw.text((lx, py), "S/", font=f_ps44, fill=(255,255,255), anchor="ls")
                 draw.text((lx + w_s + 10, py), str(row['Precio desc']), font=f_pv80, fill=(255,255,255), anchor="ls")
                 
-                # Legales Irresistible: Margen 73px (X_ini=73, X_fin=927), Y=937
+                # Legales Irresistible: Fijos en el fondo
                 draw_justified_text(draw, str(row['Legales']), f_l, 998, 73, 1007, (255,255,255), line_spacing_offset=0, force_justify=True)
-
+       
         # --- FORMATO: STORY (9:16 - Ajustes Eferton e Irresistible) ---
         elif formato == "STORY":
             # 1. LÓGICA PARA EFERTON
@@ -442,27 +450,34 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "DISPLAY":
             # 1. LÓGICA PARA EFERTON
             if "EFERTON" in tipo:
-                # Imagen: 463px, Y=25, X=440
+                # Imagen: 510px, Y=25, X=430
                 pi.thumbnail((510, 510))
                 img.paste(pi, (430, 25), pi)
                 
                 cx = 260 # Centro para Eferton
-                # Usamos el f_m definido arriba pero le restamos 2 al tamaño
                 f_m_small = ImageFont.truetype(f_m.path, f_m.size - 2)
                 draw.text((cx, 250), row['Marca'], font=f_m_small, fill=(255,255,255), anchor="mm")
                 
-                # Nombre Producto
-                draw.text((cx, 290), row['Nombre del producto'][:25], font=f_p, fill=(255,255,255), anchor="mm")
+                # --- NOMBRE DEL PRODUCTO (Máximo 2 filas, 20 caracteres) ---
+                lineas_nombre = textwrap.wrap(str(row['Nombre del producto']), width=20)
                 
-                # SKU: Subir 7px (Y: 320 - 7 = 313)
-                draw.text((cx, 313), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mm")
+                ny = 290  # Inicio del nombre
+                for line in lineas_nombre[:2]: # Limitado a 2 filas según tu pedido
+                    draw.text((cx, ny), line, font=f_p, fill=(255,255,255), anchor="mm")
+                    ny += 25 # Interlineado de 25px
+                    
+                # --- SKU (Posición dinámica) ---
+                # Si hay 1 fila, ny será 315. Si hay 2, será 340.
+                y_sku = ny + 5
+                draw.text((cx, y_sku), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mm")
                 
-                # Precio: 60pts, S/: 30pts (f_pv y f_ps ya tienen estos tamaños en el config)
-                draw_efe_preciador(draw, cx, 380, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.0, tracking=-3)
+                # --- PRECIO (Posición base 380, baja solo si es necesario) ---
+                # Si el nombre es largo, el precio bajará ligeramente de 380 para no chocar
+                y_precio = max(380, y_sku + 60)
+                draw_efe_preciador(draw, cx, y_precio, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.0, tracking=-3)
                 
-                # Legales Eferton: X inicial 40, X final 486 (como ya bajamos la posicion de legales, ahora ocupa todo el ancho pero margen 40px ambos lados)
+                # --- LEGALES (Fijos en 485) ---
                 draw_justified_text(draw, str(row['Legales']), f_l, 485, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
-
             # 2. LÓGICA PARA IRRESISTIBLE (DISPLAY)
             else:
                 # Imagen: 465px, Y=24, X=412
