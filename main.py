@@ -247,7 +247,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             
             lineas_nombre = textwrap.wrap(str(p['Nombre del producto']), width=18)
             y_nombre = yp + box_h - 85
-            for line in lineas_nombre[:2]: 
+            for line in lineas_nombre[:4]: 
                 draw.text((cx_col1, y_nombre), line, font=f_p, fill=(0,0,0), anchor="mm")
                 y_nombre += 22
             
@@ -300,8 +300,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "PPL":
             if "EFERTON" in tipo:
                 # 1. IMAGEN: X=126, Y=269, Tamaño 747x270
-                pi.thumbnail((787, 810))
-                img.paste(pi, (126, 205), pi)
+                pi.thumbnail((797, 820))
+                img.paste(pi, (126, 175), pi)
                 
                 # --- COLUMNAS IMAGINARIAS (Y base ajustada con los +70, +52, +80) ---
                 
@@ -343,7 +343,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Wrap ajustado para no pasar del ancho solicitado (aprox 15-18 caracteres)
                 lines_prod = textwrap.wrap(row['Nombre del producto'], width=13)
                 ny = 675 
-                for lp in lines_prod[:2]:
+                for lp in lines_prod[:4]:
                     draw.text((lx, ny), lp, font=f_p_irr, fill=(255,255,255), anchor="ls")
                     ny += 30
                 
@@ -380,7 +380,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Nombre del producto: Dinámico hasta 2 líneas
                 lines_prod = textwrap.wrap(row['Nombre del producto'], width=20)
                 ny = ay + 55
-                for lp in lines_prod[:2]:
+                for lp in lines_prod[:4]:
                     draw.text((239, ny), lp, font=f_p, fill=(255,255,255), anchor="ls")
                     ny += 45 
                 
@@ -417,7 +417,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 f_p_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 38)
                 lines_prod = textwrap.wrap(row['Nombre del producto'], width=18)
                 ny = 1615
-                for lp in lines_prod[:2]:
+                for lp in lines_prod[:4]:
                     draw.text((lx, ny), lp, font=f_p_irr, fill=(255,255,255), anchor="ls")
                     ny += 42 
                 
@@ -443,7 +443,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             # 1. LÓGICA PARA EFERTON
             if "EFERTON" in tipo:
                 # Imagen: 463px, Y=25, X=440
-                pi.thumbnail((490, 490))
+                pi.thumbnail((510, 510))
                 img.paste(pi, (430, 25), pi)
                 
                 cx = 260 # Centro para Eferton
@@ -477,7 +477,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Nombre del producto: 2 filas máximo, interlineado de 25px
                 lines_prod = textwrap.wrap(row['Nombre del producto'], width=20)
                 ny = 255 
-                for lp in lines_prod[:2]:
+                for lp in lines_prod[:4]:
                     draw.text((lx, ny), lp, font=f_p, fill=(255,255,255), anchor="ls")
                     ny += 25 # Mantenemos tus 25px originales
                 
