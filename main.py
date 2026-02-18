@@ -1,4 +1,3 @@
-# Importación de librerías para sistema, datos, red, imágenes y texto
 import os
 import json
 import requests
@@ -11,554 +10,440 @@ from io import BytesIO
 import textwrap 
 
 # --- CONFIGURACIÓN DE RUTAS ---
-# Usuario de GitHub donde se alojan los recursos
 USER_GH = "analyticsdatajg2025-cmd"
-# Nombre del repositorio
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
-# URL base para acceder a las imágenes generadas públicamente
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
-def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing_offset=0, force_justify=False):
-    # 1. Preparación del prefijo y fuentes
-    prefix = "CONDICIONES GENERALES: "
-    if text.startswith("CONDICIONES GENERALES"):
-        text = text.replace("CONDICIONES GENERALES:", "").strip()
-    
-    try:
-        font_path = font.path.replace("Regular", "SemiBold")
-        font_bold = ImageFont.truetype(font_path, font.size)
-    except:
-        font_bold = font
+def quitar_fondo_blanco(img):
+    return img
 
-    container_width = x_end - x_start
-    full_text = prefix + text
-    words = full_text.split()
-    
-    # 2. LÓGICA DE SALTO DE LÍNEA POR PÍXELES (Automática)
+def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing=5, prefix_width=0):
+    available_w = x_end - x_start
+    words = text.split()
     lines = []
     current_line = []
-    current_width = 0
-    space_w = draw.textlength(" ", font=font)
+    current_w = prefix_width # La primera línea considera el ancho del prefijo
 
+    # --- LÓGICA DE CORTE POR PÍXELES (No por caracteres) ---
     for word in words:
-        # Verificamos si es una de las palabras en negrita para medirla bien
-        is_bold = (len(lines) == 0 and len(current_line) <= 1)
-        word_font = font_bold if is_bold else font
-        word_w = draw.textlength(word, font=word_font)
-
-        if current_width + word_w <= container_width:
+        word_w = draw.textlength(word + " ", font=font)
+        if current_w + word_w <= available_w:
             current_line.append(word)
-            current_width += word_w + space_w
+            current_w += word_w
         else:
             lines.append(current_line)
             current_line = [word]
-            current_width = word_w + space_w
-    if current_line:
-        lines.append(current_line)
+            current_w = draw.textlength(word + " ", font=font)
+    lines.append(current_line) # Añadir la última línea
 
-    line_height = font.getbbox("Ay")[3] + line_spacing_offset
+    y = y_start
+    normal_space_w = draw.textlength(" ", font=font)
 
-    # 3. DIBUJO Y JUSTIFICACIÓN
     for i, line_words in enumerate(lines):
         if not line_words: continue
-
-        is_last_line = (i == len(lines) - 1)
-        # Medimos el ancho real de la línea para el umbral de vacío
-        line_pixels = sum(draw.textlength(w, font=font_bold if (i==0 and j<=1) else font) for j, w in enumerate(line_words))
-        too_empty = line_pixels < (container_width * 0.7)
-
-        if is_last_line or too_empty or not force_justify:
-            # ALINEACIÓN IZQUIERDA
-            x_cursor = x_start
-            for j, word in enumerate(line_words):
-                current_font = font_bold if (i == 0 and j <= 1) else font
-                draw.text((x_cursor, y_start), word, font=current_font, fill=fill)
-                x_cursor += draw.textlength(word, font=current_font) + space_w
-        else:
-            # JUSTIFICACIÓN MATEMÁTICA
-            total_words_w = sum(draw.textlength(w, font=font_bold if (i == 0 and j <= 1) else font) for j, w in enumerate(line_words))
-            # Calculamos el espacio exacto para que toque ambos bordes (x_start y x_end)
-            dynamic_space = (container_width - total_words_w) / (len(line_words) - 1)
-            
-            x_cursor = x_start
-            for j, word in enumerate(line_words):
-                current_font = font_bold if (i == 0 and j <= 1) else font
-                draw.text((x_cursor, y_start), word, font=current_font, fill=fill)
-                x_cursor += draw.textlength(word, font=current_font) + dynamic_space
         
-        y_start += line_height
+        # Ajuste de inicio y ancho disponible para cada línea
+        line_x_start = x_start + (prefix_width if i == 0 else 0)
+        line_available_w = available_w - (prefix_width if i == 0 else 0)
+        
+        line_text = " ".join(line_words)
+        total_text_w = sum(draw.textlength(w, font=font) for w in line_words)
+        num_spaces = len(line_words) - 1
+        
+        # Calculamos el espacio necesario para que llegue exactamente al X FIN
+        if num_spaces > 0:
+            target_space_w = (line_available_w - total_text_w) / num_spaces
+        else:
+            target_space_w = 0
 
-# Función para dibujar líneas punteadas divisorias
-def draw_dotted_line(draw, start, end, fill, width=2, gap=8):
-    curr_x, curr_y = start
-    dest_x, dest_y = end
-    dx, dy = dest_x - curr_x, dest_y - curr_y
-    dist = (dx**2 + dy**2)**0.5 # Pitágoras para saber la distancia total
-    if dist == 0: return
-    sx, sy = dx/dist, dy/dist
-    # Dibuja segmentos de línea saltando espacios (gap * 2)
-    for i in range(0, int(dist), gap * 2):
-        s = (curr_x + sx * i, curr_y + sy * i)
-        e = (curr_x + sx * (i + gap), curr_y + sy * (i + gap))
-        draw.line([s, e], fill=fill, width=width)
+        # CONDICIÓN DE JUSTIFICADO:
+        # No justificamos si es la última línea o si los espacios son ridículamente grandes
+        if i == len(lines) - 1 or len(line_words) <= 1 or target_space_w > (normal_space_w * 2.5):
+            draw.text((line_x_start, y), line_text, font=font, fill=fill)
+        else:
+            # JUSTIFICADO: Forzamos a que el primer caracter esté en X INICIO 
+            # y el último en X FIN
+            curr_x = line_x_start
+            for word in line_words:
+                draw.text((curr_x, y), word, font=font, fill=fill)
+                curr_x += draw.textlength(word, font=font) + target_space_w
 
-def draw_efe_preciador(draw, x_center, y_center, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2, padding_h=20):
-    num_w = 0
-    for char in text_price:
-        num_w += draw.textlength(char, font=f_pv) + tracking
-    num_w -= tracking 
-    sym_w = draw.textlength(text_s, font=f_ps)
-    
-    gap = 8 * scale 
-    full_w = sym_w + gap + num_w
-    font_size = f_pv.size
-    
-    # Mantenemos el 1.2 que redujo la altura vertical
-    h = int(font_size * 1.2 * scale) 
-
-    # Ahora el padding horizontal es variable
-    p_h = padding_h * scale
-    
-    draw.rounded_rectangle([x_center - full_w//2 - p_h, y_center - h//2, 
-                             x_center + full_w//2 + p_h, y_center + h//2], 
-                            radius=15, fill="#FFA002")
-    
-    tx = x_center - full_w//2
-    draw.text((tx, y_center), text_s, font=f_ps, fill=(255,255,255), anchor="lm")
-    
-    curr_x = tx + sym_w + gap
-    for char in text_price:
-        draw.text((curr_x, y_center), char, font=f_pv, fill=(255,255,255), anchor="lm")
-        curr_x += draw.textlength(char, font=f_pv) + tracking
-
-# Conexión con la API de Google Sheets y obtención de datos
+        # Salto de línea dinámico
+        y += font.getbbox("Ay")[3] + line_spacing
+        
 def get_sheets_data():
+    """Conexión con Google Sheets para traer datos de productos."""
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    # Carga credenciales desde variables de entorno
     creds_info = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_info, scope)
     client = gspread.authorize(creds)
-    # Abre el documento por su ID
     sheet = client.open_by_key("1PmvCyC3d0VvvZSdvWM73NYusrYevVYtRzVs2gbxjw1M")
-    # Lee los datos de la hoja principal
     data = pd.DataFrame(sheet.worksheet("Hoja 1").get_all_records())
     data.columns = [c.strip() for c in data.columns]
-    # Revisa qué diseños ya fueron procesados para no repetirlos
     res_sheet = sheet.worksheet("Resultados")
     v_act = res_sheet.get_all_values()
     viejos = {r[1].strip().upper() for r in v_act[1:] if len(r) > 1}
     return data, res_sheet, viejos
 
-# Lógica principal de dibujo según el formato
 def generar_diseno(data_input, color_version="AMARILLO"):
-    # Detecta si es un Flyer (varios productos) o un diseño individual
     is_flyer = isinstance(data_input, pd.DataFrame)
     row = data_input.iloc[0] if is_flyer else data_input
-    tienda = str(row.get('Tienda', 'LC')).strip().upper()
-    tipo = str(row['Tipo de diseño']).strip().upper()
-    formato = str(row['Formato']).upper().strip()
-    path_fonts, path_fondos = f"TIPOGRAFIA/{tienda}", f"FONDOS/{tienda}/{tipo}"
-
-    # --- DEFINICIÓN DE FONDO ---
-    # Busca el archivo de fondo que coincida con la tienda, tipo y formato
-    f_names = [f"{tienda} - {tipo} - {formato}", f"{tienda} - REPOWER {tipo} - {formato}"]
-    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in f_names for e in [".jpg", ".png", ".JPG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
+    tipo, formato = str(row['Tipo de diseño']).strip(), str(row['Formato']).upper().strip()
+    path_fonts, path_fondos = "TIPOGRAFIA/LC", f"FONDOS/LC/{tipo}"
     
+    # Colores según versión
+    txt_c = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
+    border_c = (254, 215, 0) if color_version == "AMARILLO" else (10, 6, 60)
+    accent_date = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
+
+    # Carga de imagen de fondo
+    fname_base = f"LC - {tipo} - {'FLYER' if formato == 'FLYER' else formato}"
+    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in [f"{fname_base} FONDO {color_version}", f"{fname_base} {color_version}", fname_base] for e in [".png", ".jpg", ".PNG", ".JPG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
     if not full_p: return None
-    img = Image.open(full_p).convert("RGB")
-    draw = ImageDraw.Draw(img)
+    img = Image.open(full_p).convert("RGB"); draw = ImageDraw.Draw(img)
 
-    # --- CONFIGURACIÓN DE TAMAÑOS DE FUENTE ---
     try:
-        # Valores base: p_size (Precio), s_size (Símbolo), l_size (Legales)
-        p_size = 90; s_size = 35; l_size = 10
-        if formato == "DISPLAY": 
-            p_size = 60; s_size = 30; l_size = 8
-        elif formato == "STORY": 
-            p_size = 100; s_size = 40
+        # --- CARGA INICIAL DE FUENTES COMUNES ---
+        f_f = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 24) # Fuente Fecha
+        
+        # --- AJUSTE DE TAMAÑOS POR FORMATO ---
+        if formato == "STORY":
+            f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 53)
+            f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 32)
+            f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 106)
+            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 42)
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 18)
+            f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
+        elif formato == "PPL":
+            f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 43)
+            f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 23)
+            f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 85)
+            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 36)
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
+            f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)
         elif formato == "FLYER":
-            p_size = 50; s_size = 25
+            f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 73) 
+            f_s_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)    
+            f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 16)
+            f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 18)
+            # --- AGREGADO f_ps AQUÍ PARA EVITAR EL ERROR ---
+            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 30) 
+        else: # DISPLAY
+            f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 34)
+            f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20)
+            f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 75)
+            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 30)
+            f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)
+            f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 9)
+            
+    except: 
+        # Aseguramos que todas las variables existan en caso de error de carga
+        f_m = f_p = f_pv = f_ps = f_s_ind = f_s_fly = f_f = f_l = ImageFont.load_default()
         
-        # Carga de archivos .ttf específicos
-        f_m = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 44 if formato == "STORY" else 32)
-        f_p = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30 if formato == "STORY" else 20)
-        f_pv = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", p_size) # Precio grande
-        f_ps = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", s_size) # S/ del precio
-        f_s_ind = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 18 if formato == "STORY" else 15) # SKU
-        f_l = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size) # Bloque legal
-        f_f = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26) # Texto de fecha en Flyer
-    except: f_m = f_p = f_pv = f_ps = f_s_ind = f_l = f_f = ImageFont.load_default()
-
-# --- LÓGICA ESPECÍFICA PARA FORMATO: FLYER (Centrado Dinámico y Ajustes de Diseño) ---
+# --- LÓGICA DE POSICIONAMIENTO FLYER (Múltiples productos) ---
+    
+    # --- LÓGICA DE POSICIONAMIENTO FLYER (Múltiples productos) ---
     if formato == "FLYER":
+        # 1. Fecha (Margen x=64)
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
+        wf = draw.textlength(f_txt, font=f_f)
+        x_fecha = 64 
+        
+        # Color Amarillo solicitado para la fecha: #FED700 -> (254, 215, 0)
+        amarillo_fecha = (254, 215, 0)
+        
+        # Dibujamos el recuadro y el texto de la fecha en amarillo
+        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=amarillo_fecha, width=3)
+        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=amarillo_fecha, anchor="mm")
+        
+        # Color Azul Oscuro para productos: #0A063C -> (10, 6, 60)
+        azul_oscuro = (10, 6, 60)
 
-        # Bloque de fecha con contenedor naranja
-        rect_x, rect_y = (163 if "IRRESISTIBLE" in tipo else 190), 244
-        f_f_semibold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 23)
-        w_f, h_f = draw.textlength(f_txt, font=f_f_semibold), 40
-        draw.rounded_rectangle([rect_x, rect_y, rect_x + w_f + 40, rect_y + h_f], radius=10, fill="#FFA002")
-        draw.text((rect_x + (w_f + 40)//2, rect_y + h_f//2), f_txt, font=f_f_semibold, fill=(255,255,255), anchor="mm")
+        # 2. Configuración de Cuadrícula DINÁMICA
+        num_productos = len(data_input)
         
-        num_prod = len(data_input)
-        y_limit_top = 350
-        y_limit_bottom = 1757
-        available_h = y_limit_bottom - y_limit_top
-        
-        if num_prod > 6:
-            rows = 4
-            box_h = 340
-            img_size_w, img_size_h = 350, 220 
-            preciador_scale = 0.45
+        if num_productos <= 6:
+            box_w, box_h = 456, 456
+            img_size = 338
+            gap_y = 30
+            y_offset_img = 20
         else:
-            rows = 3
-            box_h = 430 
-            img_size_w, img_size_h = 434, 292
-            preciador_scale = 0.55
-
-        total_content_h = (rows * box_h) + ((rows - 1) * 12)
-        y_centering_offset = (available_h - total_content_h) // 2
-        current_y_top = y_limit_top + y_centering_offset
+            box_w, box_h = 456, 375  
+            img_size = 250           
+            gap_y = 15               
+            y_offset_img = 10
 
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
             
-            xp = 65 + (i % 2) * 495
-            yp = current_y_top + (i // 2) * (box_h + 12)
+            xp = 64 + (i % 2) * (box_w + 40)
+            yp = 340 + (i // 2) * (box_h + gap_y)
             
+            # Dibujar Caja con fondo Blanco y contorno según border_c
+            draw.rounded_rectangle([xp, yp, xp+box_w, yp+box_h], radius=15, fill=(255,255,255), outline=border_c, width=2)
+            
+            # Imagen del producto
             try:
-                url_foto = p.get('Foto del producto calado') or p.get('Foto')
-                if url_foto:
-                    headers = {'User-Agent': 'Mozilla/5.0'}
-                    pi_res = requests.get(url_foto, headers=headers, timeout=10)
-                    pi_fly = Image.open(BytesIO(pi_res.content)).convert("RGBA")
-                    pi_fly.thumbnail((img_size_w, img_size_h))
-                    ix = int(xp + 240 - pi_fly.width // 2)
-                    iy = int(yp + 20) 
-                    img.paste(pi_fly, (ix, iy), pi_fly)
+                pi_url = p['Foto del producto calado']
+                pi = Image.open(BytesIO(requests.get(pi_url).content)).convert("RGBA")
+                pi.thumbnail((img_size, img_size), Image.Resampling.LANCZOS)
+                img.paste(pi, (int(xp + (box_w - pi.width) // 2), int(yp + y_offset_img)), pi)
             except: pass
-
-            cx_col1 = xp + 125
-            cx_col2 = xp + 345
             
-            # 1. Marca y Nombre
-            f_m_flyer = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 28)
-            draw.text((cx_col1, yp + box_h - 115), p['Marca'], font=f_m_flyer, fill=(0,0,0), anchor="mm")
+            cl, cr = xp + 114, xp + 342
             
-            lineas_nombre = textwrap.wrap(str(p['Nombre del producto']), width=18)
-            y_nombre = yp + box_h - 85
-            for line in lineas_nombre[:4]: 
-                draw.text((cx_col1, y_nombre), line, font=f_p, fill=(0,0,0), anchor="mm")
-                y_nombre += 22
+            # Marca y Nombre con nuevo color azul oscuro
+            y_marca_prod = yp + box_h - 86 
+            f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20 if len(p['Marca']) < 12 else 16)
+            draw.text((cl, y_marca_prod), p['Marca'], font=f_m_fly, fill=azul_oscuro, anchor="mm")
             
-            # 2. Precio y SKU
-            f_pv_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 53)
-            f_ps_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 30)
+            ny = y_marca_prod + 25 
+            for ln in textwrap.wrap(p['Nombre del producto'], width=18)[:2]:
+                draw.text((cl, ny), ln, font=f_p, fill=azul_oscuro, anchor="mm")
+                ny += 20
             
-            if "EFERTON" in tipo:
-                # Bajamos y_precio de -115 a -105 para acercarlo al SKU
-                y_precio_efe = yp + box_h - 105
-                # Aumentamos scale a + 0.15 para que el preciador se vea más robusto
-                draw_efe_preciador(draw, cx_col2, y_precio_efe, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale + 0.4, padding_h=10)
-                # SKU movido +8px a la derecha para centrarlo bajo el bloque de precio
-                draw.text((cx_col2 + 8, y_precio_efe + 50), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
-            else:
-                # --- PRECIO IRRESISTIBLE ---
-                # Bajamos y_precio de -115 a -100 para que no esté tan separado del SKU
-                y_precio_irr = yp + box_h - 88
-                w_s = draw.textlength("S/", font=f_ps_fly)
-                w_num = draw.textlength(str(p['Precio desc']), font=f_pv_fly)
-                gap = 5
-                w_total_p = w_s + gap + w_num
-                x_ini_p = cx_col2 - (w_total_p // 2)
-                
-                draw.text((x_ini_p, y_precio_irr), "S/", font=f_ps_fly, fill="#FFA002", anchor="ls")
-                draw.text((x_ini_p + w_s + gap, y_precio_irr), str(p['Precio desc']), font=f_pv_fly, fill="#FFA002", anchor="ls")
-                
-                # SKU movido +8px a la derecha y acercado al precio (+35 en lugar de +45)
-                draw.text((cx_col2 + 8, y_precio_irr + 25), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm") 
-
-            # Divisores
-            line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
-            if i % 2 == 0 and (i + 1) < num_prod: 
-                draw_dotted_line(draw, (xp + 475, yp + 20), (xp + 475, yp + box_h - 20), line_c)
-            if i < (num_prod - 2):
-                draw_dotted_line(draw, (xp + 20, yp + box_h + 6), (xp + 450, yp + box_h + 6), line_c)
-
-        # Legales Flyer
-        l_margin = 70 if "EFERTON" in tipo else 62
-        f_l_flyer = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
-        draw_justified_text(draw, str(row['Legales']), f_l_flyer, 1835, l_margin, 1080 - l_margin, (255,255,255), line_spacing_offset=1, force_justify=True)
+            # Precio y SKU con nuevo color azul oscuro
+            y_precio = yp + box_h - 57
+            p_val = str(p['Precio desc'])
+            tw_p = draw.textlength("S/", font=f_ps) + draw.textlength(p_val, font=f_pv) + 8
+            px_inicio = cr - tw_p // 2
+            
+            draw.text((px_inicio, y_precio), "S/", font=f_ps, fill=azul_oscuro, anchor="lm")
+            draw.text((px_inicio + draw.textlength("S/", font=f_ps) + 8, y_precio), p_val, font=f_pv, fill=azul_oscuro, anchor="lm")
+            
+            # El SKU también en azul oscuro
+            draw.text((cr, y_precio + 35), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
+            
+        # 3. Legales Fijos
+        y_legales_fijo = 1840 
+        f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16)
+        tit_legal = "CONDICIONES GENERALES: "
+        cuerpo_legal = str(row['Legales'])
+        ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
         
-    # --- LÓGICA PARA OTROS FORMATOS (PPL, STORY, DISPLAY) ---
+        # Mantenemos txt_c para legales (o cámbialo a azul_oscuro si prefieres)
+        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=txt_c)
+        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, txt_c, line_spacing=2, prefix_width=ancho_negrita)
+
+    # --- LÓGICA DE POSICIONAMIENTO FORMATOS INDIVIDUALES ---
     else:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        pi_res = requests.get(row['Foto del producto calado'], headers=headers, timeout=10)
-        pi = Image.open(BytesIO(pi_res.content)).convert("RGBA")
+        pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         
-        # --- FORMATO: PPL (Post / Pieza Principal) ---
-        if formato == "PPL":
-            if "EFERTON" in tipo:
-                # 1. IMAGEN
-                pi.thumbnail((797, 820))
-                img.paste(pi, (126, 175), pi)
-                
-                # COLUMNA 1: MARCA
-                f_m_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
-                draw.text((90, 930), row['Marca'], font=f_m_efe, fill=(255,255,255), anchor="ls")
-                
-                # COLUMNA 2: NOMBRE Y SKU (Dinámico)
-                f_p_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25)
-                f_s_efe = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22)
-                
-                # Procesamos el nombre (ancho de 30 para que use bien el espacio central)
-                lineas_nombre = textwrap.wrap(str(row['Nombre del producto']), width=25)
-                
-                # El nombre empezaba originalmente en 900 (anchor mm)
-                # Si hay más filas, subimos el inicio un poco para que no choque con legales
-                ny = 890 if len(lineas_nombre) > 1 else 900
-                
-                for line in lineas_nombre[:3]: # Permitimos hasta 3 filas
-                    draw.text((500, ny), line, font=f_p_efe, fill=(255,255,255), anchor="mm")
-                    ny += 28 # Espaciado entre líneas del nombre
-                
-                # El SKU se posiciona relativo al final del nombre
-                # Antes estaba fijo en 935, ahora es dinámico
-                y_sku = ny + 5
-                draw.text((500, y_sku), str(row['SKU']), font=f_s_efe, fill=(255,255,255), anchor="mm")
-                
-                # COLUMNA 3: PRECIO (Fijo para mantener alineación con Marca)
-                draw_efe_preciador(draw, 840, 910, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.0, tracking=-3)
-                
-                # LEGALES: Fijos en 998
-                draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 990, (255,255,255), line_spacing_offset=0, force_justify=True)
-            else: 
-                # --- PPL PRECIO IRRESISTIBLE ---
-                # Imagen
-                pi.thumbnail((682, 682))
-                img.paste(pi, (310, 287), pi)
-                
-                lx = 91 # Margen izquierdo para textos
-                
-                # Marca: Fija en Y=639
-                f_m_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
-                draw.text((lx, 639), row['Marca'], font=f_m_irr, fill=(255,255,255), anchor="ls")
-                
-                # Nombre del producto: Dinámico hasta 4 filas
-                f_p_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26)
-                lines_prod = textwrap.wrap(row['Nombre del producto'], width=13)
-                
-                ny = 675 
-                for lp in lines_prod[:4]:
-                    draw.text((lx, ny), lp, font=f_p_irr, fill=(255,255,255), anchor="ls")
-                    ny += 30 # Salto de línea
-                
-                # SKU: Se posiciona relativo al final del nombre
-                f_s_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 20)
-                y_sku = ny + 10
-                draw.text((lx, y_sku), str(row['SKU']), font=f_s_irr, fill=(255,255,255), anchor="ls")
-                
-                # PRECIO DINÁMICO: S/ 44pts, Precio 80pts
-                f_pv80 = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 80)
-                f_ps44 = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 44)
-                
-                # LÓGICA DE SEGURIDAD: 
-                # El precio base es 830, pero si el SKU baja mucho, el precio baja con él
-                # (dejamos 80px de margen entre el SKU y la base del precio)
-                py = max(830, y_sku + 80) 
-                
-                w_s = draw.textlength("S/", font=f_ps44)
-                draw.text((lx, py), "S/", font=f_ps44, fill=(255,255,255), anchor="ls")
-                draw.text((lx + w_s + 10, py), str(row['Precio desc']), font=f_pv80, fill=(255,255,255), anchor="ls")
-                
-                # Legales Irresistible: Fijos en el fondo
-                draw_justified_text(draw, str(row['Legales']), f_l, 998, 73, 1007, (255,255,255), line_spacing_offset=0, force_justify=True)
-       
-        # --- FORMATO: STORY (9:16 - Ajustes Eferton e Irresistible) ---
+        if formato == "DISPLAY":
+            # --- CONFIGURACIÓN DE IMAGEN ---
+            # Tamaño 473px, x=123, y=25
+            pi.thumbnail((473, 473))
+            img.paste(pi, (423, 25), pi) 
+
+            # --- POSICIONAMIENTO DE TEXTOS (Marca, Nombre, Precio, SKU) ---
+            # Centros ajustados: -10px en X, +10px en Y
+            cx, ny = 255, 245 
+
+            # Marca
+            draw.text((cx, 195), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
+
+            # Nombre del producto (Máximo 2 filas)
+            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
+            for l in lineas_nombre:
+                draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt")
+                ny += 27 
+
+            # Precio desc
+            tw = draw.textlength("S/", font=f_ps) + draw.textlength(str(row['Precio desc']), font=f_pv) + 15
+            px = cx - tw//2
+            draw.text((px, ny + 55), "S/ ", font=f_ps, fill=txt_c, anchor="lm")
+            draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, ny + 55), str(row['Precio desc']), font=f_pv, fill=txt_c, anchor="lm")
+
+            # SKU
+            draw.text((cx, ny + 100), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
+
+            # --- CONFIGURACIÓN DE LEGALES (JUSTIFICADO CON NEGRITA) ---
+            f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 9)
+            tit_legal = "CONDICIONES GENERALES: "
+            cuerpo_legal = str(row['Legales'])
+
+            # Calculamos el ancho de la negrita para pasarla como 'prefix_width'
+            ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
+
+            # Dibujamos el título en negrita
+            draw.text((40, 489), tit_legal, font=f_l_bold, fill=txt_c)
+
+            # Llamamos a la función para el cuerpo del texto legal
+            # Usamos prefix_width para que la primera línea empiece después de la negrita
+            draw_justified_text(
+                draw, cuerpo_legal, f_l, 
+                y_start=489, x_start=40, x_end=960, 
+                fill=txt_c, line_spacing=2, prefix_width=ancho_negrita
+            )  
+        
         elif formato == "STORY":
-            # 1. LÓGICA PARA EFERTON
-            if "EFERTON" in tipo:
-                pi.thumbnail((956, 956))
-                img.paste(pi, (72, 606), pi)
-                
-                ay = 1600 
-                # Marca
-                draw.text((239, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
-                
-                # Nombre del producto: Dinámico hasta 2 líneas
-                lines_prod = textwrap.wrap(row['Nombre del producto'], width=20)
-                ny = ay + 55
-                for lp in lines_prod[:4]:
-                    draw.text((239, ny), lp, font=f_p, fill=(255,255,255), anchor="ls")
-                    ny += 45 
-                
-                # SKU dinámico
-                y_sku = ny + 5
-                draw.text((239, y_sku), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
-                
-                # --- PRECIO EFERTON CON PRECIADOR NARANJA ---
-                f_pv_efe = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110)
-                f_ps_efe = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64)
+            # --- CONFIGURACIÓN DE IMAGEN ---
+            pi = pi.resize((805, 805), Image.Resampling.LANCZOS)
+            img.paste(pi, (140, 630), pi)
 
-                # Usamos X=780 para centrar el bloque naranja en el espacio derecho
-                px_story = 780
-                py_story = 1650
+            # --- POSICIONAMIENTO DE TEXTOS (MARCA Y PRODUCTO) ---
+            cx_textos = 150 
+            anchor_y_textos = 1482 
 
-                # Solo llamamos a la función (eliminamos el dibujo de texto manual que tenías después)
-                draw_efe_preciador(draw, px_story, py_story, "S/", str(row['Precio desc']), f_ps_efe, f_pv_efe, scale=1.1, padding_h=30)
-                
-                # Legales Eferton
-                f_l_story = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
-                draw_justified_text(draw, str(row['Legales']), f_l_story, 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
+            # Marca
+            draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt")
+            
+            # --- LÓGICA DE NOMBRE DEL PRODUCTO ---
+            ny = anchor_y_textos + 65 
+            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
+            for l in lineas_nombre:
+                draw.text((cx_textos, ny), l, font=f_p, fill=txt_c, anchor="lt")
+                ny += 40 
 
-            # 2. LÓGICA PARA IRRESISTIBLE
-            else:
-                pi.thumbnail((935, 935))
-                img.paste(pi, (78, 580), pi)
-                
-                lx = 147 
-                # Marca
-                f_m_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 46)
-                draw.text((lx, 1563), row['Marca'], font=f_m_irr, fill=(255,255,255), anchor="ls")
-                
-                # Nombre Producto: Dinámico 2 líneas
-                f_p_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 38)
-                lines_prod = textwrap.wrap(row['Nombre del producto'], width=18)
-                ny = 1615
-                for lp in lines_prod[:4]:
-                    draw.text((lx, ny), lp, font=f_p_irr, fill=(255,255,255), anchor="ls")
-                    ny += 42 
-                
-                # SKU dinámico
-                y_sku = ny + 10
-                f_s_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 29)
-                draw.text((lx, y_sku), str(row['SKU']), font=f_s_irr, fill=(255,255,255), anchor="ls")
-                
-                # PRECIO IRRESISTIBLE A RAS (Este se mantiene como texto blanco)
-                f_pv_irr = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 128)
-                f_ps_irr = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 71)
-                
-                py_irr = 1658 
-                draw.text((566, py_irr), "S/", font=f_ps_irr, fill=(255,255,255), anchor="ls")
-                w_s_irr = draw.textlength("S/", font=f_ps_irr)
-                draw.text((566 + w_s_irr + 15, py_irr), str(row['Precio desc']), font=f_pv_irr, fill=(255,255,255), anchor="ls")
-                
-                # Legales Irresistible
-                f_l_story = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2)
-                draw_justified_text(draw, str(row['Legales']), f_l_story, 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
-# --- FORMATO: DISPLAY (Ajustes Eferton e Irresistible) ---
-        elif formato == "DISPLAY":
-            # 1. LÓGICA PARA EFERTON
-            if "EFERTON" in tipo:
-                # Imagen: 510px, Y=25, X=430
-                pi.thumbnail((510, 510))
-                img.paste(pi, (430, 25), pi)
-                
-                cx = 260 # Centro para Eferton
-                f_m_small = ImageFont.truetype(f_m.path, f_m.size - 2)
-                draw.text((cx, 250), row['Marca'], font=f_m_small, fill=(255,255,255), anchor="mm")
-                
-                # --- NOMBRE DEL PRODUCTO (Máximo 2 filas, 20 caracteres) ---
-                lineas_nombre = textwrap.wrap(str(row['Nombre del producto']), width=20)
-                
-                ny = 290  # Inicio del nombre
-                for line in lineas_nombre[:2]: # Limitado a 2 filas según tu pedido
-                    draw.text((cx, ny), line, font=f_p, fill=(255,255,255), anchor="mm")
-                    ny += 25 # Interlineado de 25px
-                    
-                # --- SKU (Posición dinámica) ---
-                # Si hay 1 fila, ny será 315. Si hay 2, será 340.
-                y_sku = ny + 5
-                draw.text((cx, y_sku), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mm")
-                
-                # --- PRECIO (Posición base 380, baja solo si es necesario) ---
-                # Si el nombre es largo, el precio bajará ligeramente de 380 para no chocar
-                y_precio = max(380, y_sku + 60)
-                draw_efe_preciador(draw, cx, y_precio, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.0, tracking=-3)
-                
-                # --- LEGALES (Fijos en 485) ---
-                draw_justified_text(draw, str(row['Legales']), f_l, 485, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
-            # 2. LÓGICA PARA IRRESISTIBLE (DISPLAY)
-            else:
-                # Imagen: 465px, Y=24, X=412
-                pi.thumbnail((485, 465))
-                img.paste(pi, (412, 24), pi)
-                
-                lx = 91 # Margen izquierdo
-                
-                # Marca: Y=219
-                draw.text((lx, 219), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
-                
-                # Nombre del producto: 2 filas máximo, interlineado de 25px
-                lines_prod = textwrap.wrap(row['Nombre del producto'], width=20)
-                ny = 255 
-                for lp in lines_prod[:4]:
-                    draw.text((lx, ny), lp, font=f_p, fill=(255,255,255), anchor="ls")
-                    ny += 25 # Mantenemos tus 25px originales
-                
-                # SKU: Justo debajo del nombre
-                y_sku = ny + 5
-                draw.text((lx, y_sku), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
-                
-                # PRECIO DINÁMICO: Se posiciona relativo al SKU para evitar que se choquen
-                # Si el SKU baja por la segunda línea del nombre, el precio baja con él
-                y_precio = max(379, y_sku + 70)
+            # --- POSICIONAMIENTO DE PRECIO (AJUSTADO) ---
+            # Bajamos el bloque un poco más (de 1526 a 1540 por ejemplo)
+            anchor_y_precio = 1540 
+            
+            p_v = str(row['Precio desc'])
+            # Reducimos la separación entre S/ y el número (de 60px a 20px)
+            espacio_entre_simbolo = 20
+            tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo
+            
+            # Eje x=810 para centrar el bloque de precio
+            px_bloque_completo = 810 - tw//2
+            
+            # Dibujamos S/ y el Precio (se mantiene anchor "ls" para nivelar el ras)
+            draw.text((px_bloque_completo, anchor_y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls")
+            
+            # Posición X del número con el nuevo espacio reducido
+            px_numero = px_bloque_completo + draw.textlength("S/", font=f_ps) + espacio_entre_simbolo
+            draw.text((px_numero, anchor_y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
 
-                f_pv_irr = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 76)
-                f_ps_irr = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 42)
-                
-                # Símbolo s/ y Precio: Comparten y_precio para alinearse al ras (base común)
-                w_s_irr = draw.textlength("s/", font=f_ps_irr)
-                draw.text((lx, y_precio), "s/", font=f_ps_irr, fill=(255,255,255), anchor="ls")
-                
-                # Precio: lx + ancho del s/ + 10px de aire
-                draw.text((lx + w_s_irr + 10, y_precio), str(row['Precio desc']), font=f_pv_irr, fill=(255,255,255), anchor="ls")
-                
-                # Legales: Los mantenemos en el fondo
-                draw_justified_text(draw, str(row['Legales']), f_l, 490, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
+            # --- SKU ---
+            # Se mantiene centrado en el eje 810, bajando relativo al nuevo y del precio
+            draw.text((810, anchor_y_precio + 40), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
 
-    # --- GUARDADO FINAL ---
-    # Nombra el archivo con SKU/ID, formato y tienda
-    fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{tienda}.jpg"
+            # --- CONFIGURACIÓN DE LEGALES ---
+            f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 14)
+            tit_legal = "CONDICIONES GENERALES: "
+            cuerpo_legal = str(row['Legales'])
+            
+            ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
+            draw.text((65, 1802), tit_legal, font=f_l_bold, fill=txt_c)
+
+            draw_justified_text(
+                draw, cuerpo_legal, f_l, 
+                y_start=1802, x_start=65, x_end=1015, 
+                fill=txt_c, line_spacing=2, prefix_width=ancho_negrita
+            )
+    
+        elif formato == "PPL":
+            # --- CONFIGURACIÓN DE IMAGEN ---
+            # El área máxima permitida sigue siendo 747x550
+            pi.thumbnail((747, 550), Image.Resampling.LANCZOS)
+            
+            # --- CÁLCULO DE CENTRADO DINÁMICO ---
+            # Ancho del lienzo (PPL suele ser 1080)
+            canvas_width = 1080 
+            # Calculamos X para que el punto medio de 'pi' coincida con el centro de 1080
+            # x = (1080 / 2) - (ancho_de_imagen / 2)
+            px_centrado = (canvas_width - pi.width) // 2
+            
+            # Subimos la posición Y de 236 a 180 para dar más aire abajo
+            py_posicion = 180
+            
+            # Pegamos la imagen con el nuevo centro
+            img.paste(pi, (px_centrado, py_posicion), pi)
+
+            # --- CONFIGURACIÓN DE ALTURAS (Lo mantenemos para no afectar textos) ---
+            y_base_alineacion = 850 
+            y_precio = 865 # El ajuste que hicimos para que el precio no esté tan arriba
+
+            # --- POSICIONAMIENTO DE PRECIO Y SKU (DERECHA) ---
+            p_v = str(row['Precio desc'])
+            w_simbolo = draw.textlength("S/", font=f_ps)
+            w_monto = draw.textlength(p_v, font=f_pv)
+            espacio_interno = 15 
+            
+            tw_precio = w_simbolo + w_monto + espacio_interno
+            eje_x_derecha = 820
+            px_inicio_bloque = eje_x_derecha - tw_precio // 2 
+            
+            draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls")
+            px_numero = px_inicio_bloque + w_simbolo + espacio_interno
+            draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
+            
+            draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
+
+            # --- POSICIONAMIENTO DE TEXTOS (IZQUIERDA) ---
+            cx = 200 
+            draw.text((cx, y_base_alineacion), row['Marca'], font=f_m, fill=txt_c, anchor="ls")
+            
+            ny = y_base_alineacion + 10 
+            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=25)[:2]
+            for l in lineas_nombre:
+                draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="lt")
+                ny += 30
+
+            # --- CONFIGURACIÓN DE LEGALES ---
+            f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 13)
+            tit_legal = "CONDICIONES GENERALES: "
+            cuerpo_legal = str(row['Legales'])
+            
+            ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
+            draw.text((50, 990), tit_legal, font=f_l_bold, fill=txt_c)
+
+            draw_justified_text(
+                draw, cuerpo_legal, f_l, 
+                y_start=990, x_start=50, x_end=1030, 
+                fill=txt_c, line_spacing=2, prefix_width=ancho_negrita
+            )
+
+    # Guardar y retornar URL
+    fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{color_version}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
-
-# --- INICIO DE EJECUCIÓN CORREGIDO ---
+# --- BUCLE DE EJECUCIÓN PRINCIPAL ---
 data, res_sheet, viejos = get_sheets_data()
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+archivos_generados = 0 
 
-archivos_generados = 0 # <--- INDISPENSABLE para el main.yml
+print(f"DEBUG: Filas detectadas en el Excel: {len(data)}")
+print(f"DEBUG: Registros que ya estaban en la hoja de Resultados: {len(viejos)}")
 
-# Ciclo 1: Procesa todos los formatos que NO son FLYER
+# Procesar productos individuales
 for idx, row in data.iterrows():
     f_v = str(row['Formato']).upper().strip()
-    if f_v in ["FLYER", "", "0"]: continue 
-    tienda = str(row.get('Tienda', 'LC')).strip().upper()
-    llave = f"{row['SKU']}_{f_v}_{tienda}_EFE".upper()
+    if f_v in ["FLYER", "", "0"]: continue
     
-    if llave not in viejos:
-        print(f"🎨 Generando: {llave}")
-        url = generar_diseno(row)
-        if url: 
-            res_sheet.append_row([h_lima, llave, tienda, row['Tipo de diseño'], f_v, "EFE", url])
-            archivos_generados += 1 # <--- Sumar para avisar a GitHub
+    versiones = ["AMARILLO", "AZUL"] if str(row['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
+    for c in versiones:
+        llave = f"{row['SKU']}_{f_v}_{c}".upper()
+        
+        if llave not in viejos:
+            print(f"🎨 Generando pieza nueva: {llave}") # Esto aparecerá en el log de GitHub
+            url = generar_diseno(row, c)
+            if url: 
+                res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+                archivos_generados += 1
+        else:
+            print(f"⏭️ Saltando {llave}: ya existe en Resultados.")
 
-# Ciclo 2: Procesa específicamente los FLYERS
+# Procesar Flyers
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
 for id_f, group in fly_g.groupby('ID_Flyer'):
     if str(id_f) in ["0", "0.0", ""]: continue
-    llave = f"{id_f}_FLYER_EFE".upper()
-    if llave not in viejos:
-        print(f"🎨 Generando Flyer: {llave}")
-        url = generar_diseno(group)
-        if url: 
-            res_sheet.append_row([h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url])
-            archivos_generados += 1 # <--- Sumar para avisar a GitHub
+    versiones = ["AZUL", "AMARILLO"] if str(group.iloc[0]['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
+    for c in versiones:
+        llave = f"{id_f}_FLYER_{c}".upper()
+        if llave not in viejos:
+            print(f"🎨 Generando Flyer nuevo: {llave}")
+            url = generar_diseno(group, c)
+            if url: 
+                res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+                archivos_generados += 1
+        else:
+            print(f"⏭️ Saltando Flyer {llave}: ya existe en Resultados.")
 
-# --- SEGURO ANTI-ERROR PARA GITHUB ACTIONS ---
+# --- SOLUCIÓN DEFINITIVA AL ERROR DE GIT ---
 if archivos_generados == 0:
-    print("No se generaron piezas nuevas. Creando placeholder para evitar error de Git.")
-    with open("output/placeholder.txt", "w") as f:
-        f.write(f"Ejecución sin cambios: {h_lima}")
+    print("⚠️ No se generaron archivos nuevos. Revisa la hoja de Resultados.")
+    with open("last_run.txt", "w") as f:
+        f.write(f"Sin cambios: {h_lima}")
 else:
-    print(f"✅ Éxito: Se crearon {archivos_generados} archivos en la carpeta output.")
+    print(f"✅ Éxito: Se crearon {archivos_generados} archivos en la carpeta 'output'.")
