@@ -259,7 +259,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Bajamos y_precio de -115 a -105 para acercarlo al SKU
                 y_precio_efe = yp + box_h - 105
                 # Aumentamos scale a + 0.15 para que el preciador se vea más robusto
-                draw_efe_preciador(draw, cx_col2, y_precio_efe, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale + 0.3, padding_h=30)
+                draw_efe_preciador(draw, cx_col2, y_precio_efe, "S/", str(p['Precio desc']), f_ps_fly, f_pv_fly, scale=preciador_scale + 0.4, padding_h=10)
                 # SKU movido +8px a la derecha para centrarlo bajo el bloque de precio
                 draw.text((cx_col2 + 8, y_precio_efe + 50), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm")
             else:
@@ -276,7 +276,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((x_ini_p + w_s + gap, y_precio_irr), str(p['Precio desc']), font=f_pv_fly, fill="#FFA002", anchor="ls")
                 
                 # SKU movido +8px a la derecha y acercado al precio (+35 en lugar de +45)
-                draw.text((cx_col2 + 8, y_precio_irr + 35), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm") 
+                draw.text((cx_col2 + 8, y_precio_irr + 25), str(p['SKU']), font=f_s_ind, fill=(0,0,0), anchor="mm") 
 
             # Divisores
             line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
@@ -300,8 +300,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "PPL":
             if "EFERTON" in tipo:
                 # 1. IMAGEN: X=126, Y=269, Tamaño 747x270
-                pi.thumbnail((747, 770))
-                img.paste(pi, (126, 269), pi)
+                pi.thumbnail((757, 780))
+                img.paste(pi, (126, 245), pi)
                 
                 # --- COLUMNAS IMAGINARIAS (Y base ajustada con los +70, +52, +80) ---
                 
@@ -329,8 +329,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             else: 
                 # --- PPL PRECIO IRRESISTIBLE ---
                 # Imagen: 622px, X=290, Y=287
-                pi.thumbnail((622, 622))
-                img.paste(pi, (290, 287), pi)
+                pi.thumbnail((652, 652))
+                img.paste(pi, (310, 287), pi)
                 
                 lx = 91 # Margen izquierdo para textos
                 
@@ -370,7 +370,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "STORY":
             # 1. LÓGICA PARA EFERTON
             if "EFERTON" in tipo:
-                pi.thumbnail((936, 936))
+                pi.thumbnail((946, 946))
                 img.paste(pi, (72, 606), pi)
                 
                 ay = 1600 
@@ -405,8 +405,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
             # 2. LÓGICA PARA IRRESISTIBLE
             else:
-                pi.thumbnail((905, 905))
-                img.paste(pi, (76, 596), pi)
+                pi.thumbnail((925, 925))
+                img.paste(pi, (78, 590), pi)
                 
                 lx = 147 
                 # Marca
@@ -443,7 +443,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             # 1. LÓGICA PARA EFERTON
             if "EFERTON" in tipo:
                 # Imagen: 463px, Y=25, X=440
-                pi.thumbnail((463, 463))
+                pi.thumbnail((470, 470))
                 img.paste(pi, (440, 25), pi)
                 
                 cx = 260 # Centro para Eferton
@@ -461,12 +461,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_efe_preciador(draw, cx, 380, "S/", str(row['Precio desc']), f_ps, f_pv, scale=1.0, tracking=-3)
                 
                 # Legales Eferton: X inicial 40, X final 486 (como ya bajamos la posicion de legales, ahora ocupa todo el ancho pero margen 40px ambos lados)
-                draw_justified_text(draw, str(row['Legales']), f_l, 490, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
+                draw_justified_text(draw, str(row['Legales']), f_l, 485, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
 
             # 2. LÓGICA PARA IRRESISTIBLE (DISPLAY)
             else:
                 # Imagen: 465px, Y=24, X=412
-                pi.thumbnail((465, 465))
+                pi.thumbnail((475, 455))
                 img.paste(pi, (412, 24), pi)
                 
                 lx = 91 # Margen izquierdo
@@ -500,7 +500,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((lx + w_s_irr + 10, y_precio), str(row['Precio desc']), font=f_pv_irr, fill=(255,255,255), anchor="ls")
                 
                 # Legales: Los mantenemos en el fondo
-                draw_justified_text(draw, str(row['Legales']), f_l, 492, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
+                draw_justified_text(draw, str(row['Legales']), f_l, 490, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
 
     # --- GUARDADO FINAL ---
     # Nombra el archivo con SKU/ID, formato y tienda
