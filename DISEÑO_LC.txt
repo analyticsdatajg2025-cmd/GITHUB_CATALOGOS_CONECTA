@@ -96,6 +96,13 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     border_c = (254, 215, 0) if color_version == "AMARILLO" else (10, 6, 60)
     accent_date = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
 
+    # --- FORMATEO GLOBAL DE PRECIO ---
+    try:
+        # Convierte el valor a número y le añade la coma de miles
+        precio_val = "{:,}".format(int(float(row['Precio desc'])))
+    except:
+        precio_val = str(row['Precio desc'])
+
     # Carga de imagen de fondo
     fname_base = f"LC - {tipo} - {'FLYER' if formato == 'FLYER' else formato}"
     full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in [f"{fname_base} FONDO {color_version}", f"{fname_base} {color_version}", fname_base] for e in [".png", ".jpg", ".PNG", ".JPG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
@@ -176,6 +183,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
             
+            # --- FORMATEO DE PRECIO PARA FLYER ---
+            try:
+                p_val = "{:,}".format(int(float(p['Precio desc'])))
+            except:
+                p_val = str(p['Precio desc'])
+
             xp = 64 + (i % 2) * (box_w + 40)
             yp = 340 + (i // 2) * (box_h + gap_y)
             
@@ -204,7 +217,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             
             # Precio y SKU con nuevo color azul oscuro
             y_precio = yp + box_h - 57
-            p_val = str(p['Precio desc'])
             tw_p = draw.textlength("S/", font=f_ps) + draw.textlength(p_val, font=f_pv) + 8
             px_inicio = cr - tw_p // 2
             
@@ -249,10 +261,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 ny += 27 
 
             # Precio desc
-            tw = draw.textlength("S/", font=f_ps) + draw.textlength(str(row['Precio desc']), font=f_pv) + 15
+            tw = draw.textlength("S/", font=f_ps) + draw.textlength(precio_val, font=f_pv) + 15
             px = cx - tw//2
             draw.text((px, ny + 55), "S/ ", font=f_ps, fill=txt_c, anchor="lm")
-            draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, ny + 55), str(row['Precio desc']), font=f_pv, fill=txt_c, anchor="lm")
+            draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, ny + 55), precio_val, font=f_pv, fill=txt_c, anchor="lm")
 
             # SKU
             draw.text((cx, ny + 100), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
@@ -299,7 +311,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             # Bajamos el bloque un poco más (de 1526 a 1540 por ejemplo)
             anchor_y_precio = 1540 
             
-            p_v = str(row['Precio desc'])
+            p_v = precio_val
             # Reducimos la separación entre S/ y el número (de 60px a 20px)
             espacio_entre_simbolo = 20
             tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo
@@ -355,7 +367,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             y_precio = 865 # El ajuste que hicimos para que el precio no esté tan arriba
 
             # --- POSICIONAMIENTO DE PRECIO Y SKU (DERECHA) ---
-            p_v = str(row['Precio desc'])
+            p_v = precio_val
             w_simbolo = draw.textlength("S/", font=f_ps)
             w_monto = draw.textlength(p_v, font=f_pv)
             espacio_interno = 15 
