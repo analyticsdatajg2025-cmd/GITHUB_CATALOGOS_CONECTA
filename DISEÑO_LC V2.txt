@@ -129,12 +129,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)
         elif formato == "FLYER":
-            f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 73) 
+            f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 70) 
             f_s_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)    
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 16)
             f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 18)
             # --- AGREGADO f_ps AQUÍ PARA EVITAR EL ERROR ---
-            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 30) 
+            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 28) 
         else: # DISPLAY
             f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 34)
             f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20)
@@ -157,11 +157,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         x_fecha = 64 
         
         # Color Amarillo solicitado para la fecha: #FED700 -> (254, 215, 0)
-        amarillo_fecha = (254, 215, 0)
+        color_fecha = (0, 0, 0)
         
         # Dibujamos el recuadro y el texto de la fecha en amarillo
-        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=amarillo_fecha, width=3)
-        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=amarillo_fecha, anchor="mm")
+        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=color_fecha, width=3)
+        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=color_fecha, anchor="mm")
         
         # Color Azul Oscuro para productos: #0A063C -> (10, 6, 60)
         azul_oscuro = (10, 6, 60)
