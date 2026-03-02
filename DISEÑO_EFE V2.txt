@@ -394,18 +394,18 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 
                 ay = 1600 
                 # Marca
-                draw.text((239, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
+                draw.text((111, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
                 
                 # Nombre del producto: Dinámico hasta 2 líneas
                 lines_prod = textwrap.wrap(row['Nombre del producto'], width=20)
                 ny = ay + 55
                 for lp in lines_prod[:4]:
-                    draw.text((239, ny), lp, font=f_p, fill=(255,255,255), anchor="ls")
+                    draw.text((111, ny), lp, font=f_p, fill=(255,255,255), anchor="ls")
                     ny += 45 
                 
                 # SKU dinámico
                 y_sku = ny + 5
-                draw.text((239, y_sku), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
+                draw.text((111, y_sku), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
                 
                 # --- PRECIO EFERTON CON PRECIADOR NARANJA ---
                 f_pv_efe = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110)
