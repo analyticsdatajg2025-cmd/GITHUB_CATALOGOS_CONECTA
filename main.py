@@ -573,3 +573,4 @@ if archivos_generados == 0:
         f.write(f"Ejecución sin cambios: {h_lima}")
 else:
     print(f"✅ Éxito: Se crearon {archivos_generados} archivos en la carpeta output.")
+    
