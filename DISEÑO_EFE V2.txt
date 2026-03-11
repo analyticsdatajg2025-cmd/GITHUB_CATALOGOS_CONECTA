@@ -434,7 +434,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 
                 # Nombre Producto: Dinámico 2 líneas
                 f_p_irr = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 38)
-                lines_prod = textwrap.wrap(row['Nombre del producto'], width=18)
+                lines_prod = textwrap.wrap(row['Nombre del producto'], width=15)
                 ny = 1615
                 for lp in lines_prod[:4]:
                     draw.text((lx, ny), lp, font=f_p_irr, fill=(255,255,255), anchor="ls")
