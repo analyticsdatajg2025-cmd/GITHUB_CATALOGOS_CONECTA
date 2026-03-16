@@ -431,7 +431,7 @@ for idx, row in data.iterrows():
             print(f"🎨 Generando pieza nueva: {llave}") # Esto aparecerá en el log de GitHub
             url = generar_diseno(row, c)
             if url: 
-                res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+                res_sheet.append_row([h_lima, llave, "LC", row['Tipo de diseño'], f_v, c, url])
                 archivos_generados += 1
         else:
             print(f"⏭️ Saltando {llave}: ya existe en Resultados.")
@@ -447,7 +447,7 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
             print(f"🎨 Generando Flyer nuevo: {llave}")
             url = generar_diseno(group, c)
             if url: 
-                res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+                res_sheet.append_row([h_lima, llave, "LC", group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
                 archivos_generados += 1
         else:
             print(f"⏭️ Saltando Flyer {llave}: ya existe en Resultados.")
