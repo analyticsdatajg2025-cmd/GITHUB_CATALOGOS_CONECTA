@@ -233,10 +233,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         cuerpo_legal = str(row['Legales'])
         ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
         
-        # Mantenemos txt_c para legales (o cámbialo a azul_oscuro si prefieres)
-        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=txt_c)
-        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, txt_c, line_spacing=2, prefix_width=ancho_negrita)
-
+       # Forzamos color NEGRO para legales en el Flyer
+        color_negro = (0, 0, 0)
+        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=color_negro)
+        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, color_negro, line_spacing=2, prefix_width=ancho_negrita)
+        
     # --- LÓGICA DE POSICIONAMIENTO FORMATOS INDIVIDUALES ---
     else:
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
