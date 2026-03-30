@@ -129,12 +129,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_s_ind = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 14)
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)
         elif formato == "FLYER":
-            f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 66) 
+            f_pv = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 73) 
             f_s_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 13)    
             f_l = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1.otf", 16)
-            f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16)
+            f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 18)
             # --- AGREGADO f_ps AQUÍ PARA EVITAR EL ERROR ---
-            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 26) 
+            f_ps = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 30) 
         else: # DISPLAY
             f_m = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 34)
             f_p = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20)
@@ -157,11 +157,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         x_fecha = 64 
         
         # Color Amarillo solicitado para la fecha: #FED700 -> (254, 215, 0)
-        color_fecha = (0, 0, 0)
+        amarillo_fecha = (254, 215, 0)
         
         # Dibujamos el recuadro y el texto de la fecha en amarillo
-        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=color_fecha, width=3)
-        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=color_fecha, anchor="mm")
+        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=amarillo_fecha, width=3)
+        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=amarillo_fecha, anchor="mm")
         
         # Color Azul Oscuro para productos: #0A063C -> (10, 6, 60)
         azul_oscuro = (10, 6, 60)
@@ -193,7 +193,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             yp = 340 + (i // 2) * (box_h + gap_y)
             
             # Dibujar Caja con fondo Blanco y contorno según border_c
-            draw.rounded_rectangle([xp, yp, xp+box_w, yp+box_h], radius=15, fill=(255,255,255), outline=(255, 255, 255), width=2)
+            draw.rounded_rectangle([xp, yp, xp+box_w, yp+box_h], radius=15, fill=(255,255,255), outline=border_c, width=2)
             
             # Imagen del producto
             try:
@@ -234,8 +234,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
         
         # Mantenemos txt_c para legales (o cámbialo a azul_oscuro si prefieres)
-        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=(0, 0, 0))
-        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, (0, 0, 0), line_spacing=2, prefix_width=ancho_negrita)
+        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=txt_c)
+        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, txt_c, line_spacing=2, prefix_width=ancho_negrita)
 
     # --- LÓGICA DE POSICIONAMIENTO FORMATOS INDIVIDUALES ---
     else:
@@ -409,54 +409,53 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     # Guardar y retornar URL
     fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{color_version}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
+# --- BUCLE DE EJECUCIÓN PRINCIPAL ---
+data, res_sheet, viejos = get_sheets_data()
+os.makedirs('output', exist_ok=True)
+h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+archivos_generados = 0 
 
-# # --- BUCLE DE EJECUCIÓN PRINCIPAL ---
-# data, res_sheet, viejos = get_sheets_data()
-# os.makedirs('output', exist_ok=True)
-# h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
-# archivos_generados = 0 
+print(f"DEBUG: Filas detectadas en el Excel: {len(data)}")
+print(f"DEBUG: Registros que ya estaban en la hoja de Resultados: {len(viejos)}")
 
-# print(f"DEBUG: Filas detectadas en el Excel: {len(data)}")
-# print(f"DEBUG: Registros que ya estaban en la hoja de Resultados: {len(viejos)}")
-
-# # Procesar productos individuales
-# for idx, row in data.iterrows():
-#     f_v = str(row['Formato']).upper().strip()
-#     if f_v in ["FLYER", "", "0"]: continue
+# Procesar productos individuales
+for idx, row in data.iterrows():
+    f_v = str(row['Formato']).upper().strip()
+    if f_v in ["FLYER", "", "0"]: continue
     
-#     versiones = ["AMARILLO", "AZUL"] if str(row['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
-#     for c in versiones:
-#         llave = f"{row['SKU']}_{f_v}_{c}".upper()
+    versiones = ["AMARILLO", "AZUL"] if str(row['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
+    for c in versiones:
+        llave = f"{row['SKU']}_{f_v}_{c}".upper()
         
-#         if llave not in viejos:
-#             print(f"🎨 Generando pieza nueva: {llave}") # Esto aparecerá en el log de GitHub
-#             url = generar_diseno(row, c)
-#             if url: 
-#                 res_sheet.append_row([h_lima, llave, "LC", row['Tipo de diseño'], f_v, c, url])
-#                 archivos_generados += 1
-#         else:
-#             print(f"⏭️ Saltando {llave}: ya existe en Resultados.")
+        if llave not in viejos:
+            print(f"🎨 Generando pieza nueva: {llave}") # Esto aparecerá en el log de GitHub
+            url = generar_diseno(row, c)
+            if url: 
+                res_sheet.append_row([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+                archivos_generados += 1
+        else:
+            print(f"⏭️ Saltando {llave}: ya existe en Resultados.")
 
-# # Procesar Flyers
-# fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
-# for id_f, group in fly_g.groupby('ID_Flyer'):
-#     if str(id_f) in ["0", "0.0", ""]: continue
-#     versiones = ["AZUL", "AMARILLO"] if str(group.iloc[0]['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
-#     for c in versiones:
-#         llave = f"{id_f}_FLYER_{c}".upper()
-#         if llave not in viejos:
-#             print(f"🎨 Generando Flyer nuevo: {llave}")
-#             url = generar_diseno(group, c)
-#             if url: 
-#                 res_sheet.append_row([h_lima, llave, "LC", group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
-#                 archivos_generados += 1
-#         else:
-#             print(f"⏭️ Saltando Flyer {llave}: ya existe en Resultados.")
+# Procesar Flyers
+fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
+for id_f, group in fly_g.groupby('ID_Flyer'):
+    if str(id_f) in ["0", "0.0", ""]: continue
+    versiones = ["AZUL", "AMARILLO"] if str(group.iloc[0]['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
+    for c in versiones:
+        llave = f"{id_f}_FLYER_{c}".upper()
+        if llave not in viejos:
+            print(f"🎨 Generando Flyer nuevo: {llave}")
+            url = generar_diseno(group, c)
+            if url: 
+                res_sheet.append_row([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+                archivos_generados += 1
+        else:
+            print(f"⏭️ Saltando Flyer {llave}: ya existe en Resultados.")
 
-# # --- SOLUCIÓN DEFINITIVA AL ERROR DE GIT ---
-# if archivos_generados == 0:
-#     print("⚠️ No se generaron archivos nuevos. Revisa la hoja de Resultados.")
-#     with open("last_run.txt", "w") as f:
-#         f.write(f"Sin cambios: {h_lima}")
-# else:
-#     print(f"✅ Éxito: Se crearon {archivos_generados} archivos en la carpeta 'output'.")
+# --- SOLUCIÓN DEFINITIVA AL ERROR DE GIT ---
+if archivos_generados == 0:
+    print("⚠️ No se generaron archivos nuevos. Revisa la hoja de Resultados.")
+    with open("last_run.txt", "w") as f:
+        f.write(f"Sin cambios: {h_lima}")
+else:
+    print(f"✅ Éxito: Se crearon {archivos_generados} archivos en la carpeta 'output'.")
