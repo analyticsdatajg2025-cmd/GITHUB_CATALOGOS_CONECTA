@@ -1,13 +1,10 @@
 import os
 from datetime import datetime, timedelta
-# Importamos tus archivos como módulos
-# Asumimos que los renombraste a diseno_lc.py y diseno_efe.py
 import diseno_lc as lc
 import diseno_efe as efe
 
 def ejecutar_sistema_unificado():
     os.makedirs('output', exist_ok=True)
-    # Obtención de hora actual (Lima UTC-5)
     h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
     archivos_generados = 0
 
@@ -17,7 +14,8 @@ def ejecutar_sistema_unificado():
     print("\n🔎 Procesando Tienda: LC...")
     try:
         data_lc, res_sheet_lc, viejos_lc = lc.get_sheets_data()
-        
+        filas_para_log_lc = [] # <-- Lista para acumular resultados de LC
+
         # Productos Individuales LC
         for idx, row in data_lc.iterrows():
             f_v = str(row['Formato']).upper().strip()
@@ -29,8 +27,8 @@ def ejecutar_sistema_unificado():
                 if llave not in viejos_lc:
                     url = lc.generar_diseno(row, c)
                     if url:
-                        # Enviamos las 7 columnas: Tienda es "LC" [cite: 55]
-                        res_sheet_lc.append_row([h_lima, llave, "LC", row['Tipo de diseño'], f_v, c, url])
+                        # En lugar de append_row, guardamos en la lista [cite: 55]
+                        filas_para_log_lc.append([h_lima, llave, "LC", row['Tipo de diseño'], f_v, c, url])
                         archivos_generados += 1
 
         # Flyers LC
@@ -41,9 +39,15 @@ def ejecutar_sistema_unificado():
             if llave not in viejos_lc:
                 url = lc.generar_diseno(group, "AMARILLO")
                 if url:
-                    # Enviamos las 7 columnas [cite: 57]
-                    res_sheet_lc.append_row([h_lima, llave, "LC", group.iloc[0]['Tipo de diseño'], "FLYER", "AMARILLO", url])
+                    # Guardamos en la lista [cite: 57]
+                    filas_para_log_lc.append([h_lima, llave, "LC", group.iloc[0]['Tipo de diseño'], "FLYER", "AMARILLO", url])
                     archivos_generados += 1
+        
+        # --- ESCRITURA ÚNICA PARA LC ---
+        if filas_para_log_lc:
+            res_sheet_lc.append_rows(filas_para_log_lc) # Envía todo de golpe
+            print(f"✅ Se registraron {len(filas_para_log_lc)} filas en LC.")
+
     except Exception as error:
         print(f"❌ Error en módulo LC: {error}")
 
@@ -51,19 +55,20 @@ def ejecutar_sistema_unificado():
     print("\n🔎 Procesando Tienda: EFE...")
     try:
         data_efe, res_sheet_efe, viejos_efe = efe.get_sheets_data()
+        filas_para_log_efe = [] # <-- Lista para acumular resultados de EFE
         
         # Productos Individuales EFE
         for idx, row in data_efe.iterrows():
             f_v = str(row['Formato']).upper().strip()
             if f_v in ["FLYER", "", "0"]: continue
-            tienda = str(row.get('Tienda', 'EFE')).strip().upper() # Valor por defecto EFE [cite: 144]
+            tienda = str(row.get('Tienda', 'EFE')).strip().upper() [cite: 144]
             llave = f"{row['SKU']}_{f_v}_{tienda}_EFE".upper()
             
             if llave not in viejos_efe:
                 url = efe.generar_diseno(row)
                 if url:
-                    # EFE ya enviaba 7 columnas por su lógica interna [cite: 144]
-                    res_sheet_efe.append_row([h_lima, llave, tienda, row['Tipo de diseño'], f_v, "EFE", url])
+                    # Guardamos en la lista [cite: 144]
+                    filas_para_log_efe.append([h_lima, llave, tienda, row['Tipo de diseño'], f_v, "EFE", url])
                     archivos_generados += 1
 
         # Flyers EFE
@@ -74,9 +79,15 @@ def ejecutar_sistema_unificado():
             if llave not in viejos_efe:
                 url = efe.generar_diseno(group)
                 if url:
-                    # Enviamos las 7 columnas para EFE [cite: 145]
-                    res_sheet_efe.append_row([h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url])
+                    # Guardamos en la lista [cite: 145]
+                    filas_para_log_efe.append([h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url])
                     archivos_generados += 1
+
+        # --- ESCRITURA ÚNICA PARA EFE ---
+        if filas_para_log_efe:
+            res_sheet_efe.append_rows(filas_para_log_efe) # Envía todo de golpe
+            print(f"✅ Se registraron {len(filas_para_log_efe)} filas en EFE.")
+
     except Exception as error:
         print(f"❌ Error en módulo EFE: {error}")
 
@@ -90,4 +101,3 @@ def ejecutar_sistema_unificado():
 
 if __name__ == "__main__":
     ejecutar_sistema_unificado()
-    
