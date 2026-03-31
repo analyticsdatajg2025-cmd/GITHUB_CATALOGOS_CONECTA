@@ -229,4 +229,3 @@ if archivos_generados == 0:
     print("⚠️ No se generaron archivos nuevos.")
     with open("last_run.txt", "w") as f:
         f.write(f"Sin cambios: {h_lima}")
-
