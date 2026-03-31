@@ -177,7 +177,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 13); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((50, 990), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=990, x_start=50, x_end=1030, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
 
-    fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{color_version}.jpg"
+    # Limpiamos el SKU de caracteres prohibidos en nombres de archivos
+    sku_limpio = str(row['SKU'] or row['ID_Flyer']).replace("/", "-").replace("\\", "-")
+    fname = f"{sku_limpio}_{formato}_{color_version}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
 
 # --- BUCLE DE EJECUCIÓN PRINCIPAL (OPTIMIZADO PARA EVITAR ERROR 429) ---
@@ -196,7 +198,9 @@ for idx, row in data.iterrows():
     
     versiones = ["AMARILLO", "AZUL"] if str(row['Tipo de diseño']).strip() == "DSCTOS POWER" else ["AMARILLO"]
     for c in versiones:
-        llave = f"{row['SKU']}_{f_v}_{c}".upper()
+        # Limpiamos el SKU para la llave de control
+        sku_val = str(row['SKU']).replace("/", "-").replace("\\", "-")
+        llave = f"{sku_val}_{f_v}_{c}".upper()
         if llave not in viejos:
             print(f"🎨 Generando pieza nueva: {llave}")
             url = generar_diseno(row, c)

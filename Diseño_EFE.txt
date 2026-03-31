@@ -529,8 +529,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), f_l, 490, 40, 960, (255,255,255), line_spacing_offset=0, force_justify=True)
 
     # --- GUARDADO FINAL ---
-    # Nombra el archivo con SKU/ID, formato y tienda
-    fname = f"{row['SKU'] or row['ID_Flyer']}_{formato}_{tienda}.jpg"
+    sku_limpio = str(row['SKU'] or row['ID_Flyer']).replace("/", "-").replace("\\", "-")
+    fname = f"{sku_limpio}_{formato}_{tienda}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
 
 # --- INICIO DE EJECUCIÓN CORREGIDO ---
