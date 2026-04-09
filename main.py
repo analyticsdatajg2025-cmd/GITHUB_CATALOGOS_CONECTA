@@ -109,10 +109,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
         wf = draw.textlength(f_txt, font=f_f)
         x_fecha = 64 
-        # AJUSTE: Color Negro para fecha y contorno
-        negro_fecha = (0, 0, 0)
-        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=negro_fecha, width=3)
-        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=negro_fecha, anchor="mm")
+        # AJUSTE: Color Blanco para fecha y contorno en el Flyer
+        color_blanco = (255, 255, 255)
+        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=color_blanco, width=3)
+        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=color_blanco, anchor="mm")
         
         azul_oscuro = (10, 6, 60)
         num_productos = len(data_input)
@@ -141,13 +141,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((px_inicio + draw.textlength("S/", font=f_ps) + 8, y_precio), p_val, font=f_pv, fill=azul_oscuro, anchor="lm")
             draw.text((cr, y_precio + 35), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
         
-        # AJUSTE: Legales en Negro para Flyer
+        # AJUSTE: Legales en Blanco para Flyer
         y_legales_fijo = 1815; f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
-        color_negro = (0, 0, 0)
-        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=color_negro)
-        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, color_negro, line_spacing=2, prefix_width=ancho_negrita)
+        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=color_blanco)
+        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, color_blanco, line_spacing=2, prefix_width=ancho_negrita)
     else:
-        # Lógica para otros formatos se mantiene igual...
+        # Otros formatos mantienen txt_c (Amarillo/Blanco según versión)
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         if formato == "DISPLAY":
             pi.thumbnail((483, 483)); img.paste(pi, (423, 25), pi); cx, ny = 255, 245 
@@ -186,7 +185,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     fname = f"{sku_limpio}_{formato}_{color_version}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
 
-# --- BUCLE DE EJECUCIÓN PRINCIPAL (CON ACUMULACIÓN DE FILAS) ---
+# --- BUCLE DE EJECUCIÓN PRINCIPAL ---
 data, res_sheet, viejos = get_sheets_data()
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
