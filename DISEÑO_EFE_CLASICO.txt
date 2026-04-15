@@ -145,15 +145,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
     if formato == "FLYER":
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
+        rect_x, rect_y = (163 if "IRRESISTIBLE" in tipo else 190), 244
         f_f_semibold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 23)
-        
-        # AJUSTE: Coordenadas ajustadas más a la derecha (sin el rectángulo de fondo)
-        # Se calcula el eje central (x_center) alrededor de 800-830 dependiendo del formato
-        x_center = 800 if "IRRESISTIBLE" in tipo else 830
-        y_center = 264 # Mantiene la altura que tenía originalmente (244 + 40//2)
-        
-        draw.text((x_center, y_center), f_txt, font=f_f_semibold, fill=(255,255,255), anchor="mm")
-        
+        w_f, h_f = draw.textlength(f_txt, font=f_f_semibold), 40
+        draw.rounded_rectangle([rect_x, rect_y, rect_x + w_f + 40, rect_y + h_f], radius=10, fill="#FFA002")
+        draw.text((rect_x + (w_f + 40)//2, rect_y + h_f//2), f_txt, font=f_f_semibold, fill=(255,255,255), anchor="mm")
         num_prod = len(data_input)
         y_limit_top, y_limit_bottom = 350, 1757
         available_h = y_limit_bottom - y_limit_top
