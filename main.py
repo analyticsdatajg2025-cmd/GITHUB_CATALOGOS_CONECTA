@@ -145,14 +145,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
     if formato == "FLYER":
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
-        f_f_semibold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 23)
-        
-        # AJUSTE: Coordenadas ajustadas más a la derecha (sin el rectángulo de fondo)
-        # Se calcula el eje central (x_center) alrededor de 800-830 dependiendo del formato
-        x_center = 800 if "IRRESISTIBLE" in tipo else 830
-        y_center = 264 # Mantiene la altura que tenía originalmente (244 + 40//2)
-        
-        draw.text((x_center, y_center), f_txt, font=f_f_semibold, fill=(255,255,255), anchor="mm")
+        # AJUSTE: Tamaño de fuente aumentado en 3 unidades y posición fija X=355, Y=275
+        f_f_semibold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 26)
+        draw.text((355, 275), f_txt, font=f_f_semibold, fill=(255,255,255), anchor="lm")
         
         num_prod = len(data_input)
         y_limit_top, y_limit_bottom = 350, 1757
@@ -204,7 +199,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado'], timeout=10).content)).convert("RGBA")
         if formato == "PPL":
             if "EFERTON" in tipo:
-                pi.thumbnail((797, 820)); img.paste(pi, (126, 175), pi)
+                # AJUSTE: Imagen reducida en 30px por lado (797-60, 820-60)
+                pi.thumbnail((737, 760)); img.paste(pi, (156, 175), pi)
                 draw.text((90, 930), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
                 lines = textwrap.wrap(str(row['Nombre del producto']), width=25); ny = 890 if len(lines) > 1 else 900
                 for line in lines[:3]: draw.text((500, ny), line, font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25), fill=(255,255,255), anchor="mm"); ny += 28
@@ -223,10 +219,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "STORY":
             if "EFERTON" in tipo:
                 pi.thumbnail((956, 956)); img.paste(pi, (72, 606), pi); ay = 1600
-                draw.text((239, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
+                # AJUSTE: Bloque de textos movidos 20px a la izquierda (239 -> 219)
+                lx_story = 219
+                draw.text((lx_story, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
                 ny = ay + 55
-                for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((239, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 45
-                y_s = ny + 5; draw.text((239, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
+                for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((lx_story, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 45
+                y_s = ny + 5; draw.text((lx_story, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
                 draw_efe_preciador(draw, 780, 1650, "S/", precio_val, ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64), ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110), scale=1.1, padding_h=30)
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
             else:
@@ -240,7 +238,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
         elif formato == "DISPLAY":
             if "EFERTON" in tipo:
-                pi.thumbnail((510, 510)); img.paste(pi, (430, 25), pi); cx = 260
+                # AJUSTE: Imagen reducida en 30px por lado (510-60)
+                pi.thumbnail((450, 450)); img.paste(pi, (460, 25), pi); cx = 260
                 draw.text((cx, 250), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")
                 ny = 290
                 for line in textwrap.wrap(str(row['Nombre del producto']), width=20)[:2]: draw.text((cx, ny), line, font=f_p, fill=(255,255,255), anchor="mm"); ny += 25
@@ -262,7 +261,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     fname = f"{sku_limpio}_{formato}_{tienda}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
 
-# --- INICIO DE EJECUCIÓN (OPTIMIZADO PARA EVITAR ERROR 429) ---
+# --- INICIO DE EJECUCIÓN ---
 data, res_sheet, viejos = get_sheets_data()
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
@@ -291,7 +290,7 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
         url = generar_diseno(group)
         if url: filas_para_google.append([h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url])
 
-# --- ESCRITURA FINAL MASIVA (SOLO 1 PETICIÓN) ---
+# --- ESCRITURA FINAL ---
 if filas_para_google:
     res_sheet.append_rows(filas_para_google)
     print(f"✅ Éxito: Se registraron {len(filas_para_google)} piezas nuevas.")
