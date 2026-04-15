@@ -111,8 +111,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         x_fecha = 64 
         # AJUSTE: Color Negro para fecha y contorno en el Flyer
         color_negro = (0, 0, 0)
-        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=color_negro, width=3)
-        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=color_negro, anchor="mm")
+        draw.rounded_rectangle([x_fecha, 275, x_fecha+wf+35, 325], radius=10, outline=color_negro, width=3)
+        draw.text((x_fecha+(wf+35)//2, 300), f_txt, font=f_f, fill=color_negro, anchor="mm")
         
         azul_oscuro = (10, 6, 60)
         # AJUSTE: Borde blanco para los productos
