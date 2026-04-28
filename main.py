@@ -177,7 +177,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 14); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((65, 1802), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=1802, x_start=65, x_end=1015, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "PPL":
-            pi.thumbnail((847, 650), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2; py_posicion = 220; img.paste(pi, (px_centrado, py_posicion), pi); y_base_alineacion, y_precio = 850, 865 
+            pi.thumbnail((600, 600), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2; py_posicion = 220; img.paste(pi, (px_centrado, py_posicion), pi); y_base_alineacion, y_precio = 850, 865 
             p_v, w_simbolo, w_monto, espacio_interno = precio_val, draw.textlength("S/", font=f_ps), draw.textlength(precio_val, font=f_pv), 15
             tw_precio = w_simbolo + w_monto + espacio_interno; eje_x_derecha = 820; px_inicio_bloque = eje_x_derecha - tw_precio // 2 
             draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_inicio_bloque + w_simbolo + espacio_interno; draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls"); draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
