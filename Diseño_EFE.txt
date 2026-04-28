@@ -200,7 +200,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "PPL":
             if "EFERTON" in tipo:
                 # AJUSTE: Imagen reducida en 30px por lado (797-60, 820-60)
-                pi.thumbnail((600, 600)); img.paste(pi, (156, 175), pi)
+                pi.thumbnail((600, 600)); img.paste(pi, (190, 270), pi)
                 draw.text((90, 930), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
                 lines = textwrap.wrap(str(row['Nombre del producto']), width=25); ny = 890 if len(lines) > 1 else 900
                 for line in lines[:3]: draw.text((500, ny), line, font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25), fill=(255,255,255), anchor="mm"); ny += 28
