@@ -115,7 +115,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         color_blanco = (255, 255, 255)
         # AJUSTE: Color Azul para legales en el Flyer
         azul_legales = (10, 6, 60)
-        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=color_blanco, width=3)
+        # AJUSTE: Se quita el borde/recuadro blanco de la fecha (solo queda el texto)
         draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=color_blanco, anchor="mm")
         
         azul_oscuro = (10, 6, 60)
