@@ -149,7 +149,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         w_f, h_f = draw.textlength(f_txt, font=f_f_semibold), 40
         if "EFERTON" in tipo:
             # AJUSTE: Fecha a la derecha SIN contenedor naranja, con margen para que no quede al extremo
-            margen_der = 80
+            margen_der = 65
             x_fecha_der = 1080 - margen_der - w_f
             y_fecha_centro = 244 + h_f // 2
             # AJUSTE: Color de la fecha en BLANCO (antes naranja)
