@@ -253,7 +253,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
         elif formato == "DISPLAY":
             if "EFERTON" in tipo:
-                pi.thumbnail((510, 510)); img.paste(pi, (430, 25), pi); cx = 260
+                pi.thumbnail((510, 510)); img.paste(pi, (430, 10), pi); cx = 260
                 draw.text((cx, 250), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")
                 ny = 290
                 for line in textwrap.wrap(str(row['Nombre del producto']), width=20)[:2]: draw.text((cx, ny), line, font=f_p, fill=(255,255,255), anchor="mm"); ny += 25
