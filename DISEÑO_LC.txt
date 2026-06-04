@@ -59,6 +59,33 @@ def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_sp
                 draw.text((curr_x, y), word, font=font, fill=fill)
                 curr_x += draw.textlength(word, font=font) + target_space_w
         y += font.getbbox("Ay")[3] + line_spacing
+
+# --- AUTO-AJUSTE DE NOMBRES LARGOS ---
+def envolver_por_ancho(draw, texto, fuente, ancho_max):
+    """Envuelve el texto por ANCHO REAL en px (no por número de caracteres)."""
+    palabras = str(texto).split()
+    lineas, actual = [], ""
+    for w in palabras:
+        prueba = (actual + " " + w).strip()
+        if not actual or draw.textlength(prueba, font=fuente) <= ancho_max:
+            actual = prueba
+        else:
+            lineas.append(actual); actual = w
+    if actual: lineas.append(actual)
+    return lineas
+
+def ajustar_nombre(draw, texto, ruta_fuente, size_max, size_min, ancho_max, max_lineas):
+    """Devuelve (lineas, fuente, alto_linea). Reduce la fuente hasta que entre en
+    max_lineas. NUNCA corta el texto: si llega al size_min muestra todo igual."""
+    size = size_max
+    fuente = ImageFont.truetype(ruta_fuente, size)
+    lineas = envolver_por_ancho(draw, texto, fuente, ancho_max)
+    while len(lineas) > max_lineas and size > size_min:
+        size -= 1
+        fuente = ImageFont.truetype(ruta_fuente, size)
+        lineas = envolver_por_ancho(draw, texto, fuente, ancho_max)
+    alto_linea = int(size * 1.25)  # interlineado compacto
+    return lineas, fuente, alto_linea
         
 def get_sheets_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -78,6 +105,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     row = data_input.iloc[0] if is_flyer else data_input
     tipo, formato = str(row['Tipo de diseño']).strip(), str(row['Formato']).upper().strip()
     path_fonts, path_fondos = "TIPOGRAFIA/LC", f"FONDOS/LC/{tipo}"
+    ruta_bold = f"{path_fonts}/HurmeGeometricSans1 Bold.otf"
     
     txt_c = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
     border_c = (254, 215, 0) if color_version == "AMARILLO" else (10, 6, 60)
@@ -139,8 +167,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20 if len(p['Marca']) < 12 else 16)
             draw.text((cl, y_marca_prod), p['Marca'], font=f_m_fly, fill=azul_oscuro, anchor="mm")
             ny = y_marca_prod + 25 
-            for ln in textwrap.wrap(p['Nombre del producto'], width=18)[:2]:
-                draw.text((cl, ny), ln, font=f_p, fill=azul_oscuro, anchor="mm"); ny += 20
+            # AJUSTE: nombre auto-ajustable (máx 2 líneas, reduce fuente si es muy largo). Centrado.
+            lineas_nombre, f_nom, alto_l = ajustar_nombre(draw, p['Nombre del producto'], ruta_bold, size_max=18, size_min=12, ancho_max=200, max_lineas=2)
+            for ln in lineas_nombre:
+                draw.text((cl, ny), ln, font=f_nom, fill=azul_oscuro, anchor="mm"); ny += alto_l
             y_precio = yp + box_h - 57; tw_p = draw.textlength("S/", font=f_ps) + draw.textlength(p_val, font=f_pv) + 8; px_inicio = cr - tw_p // 2
             draw.text((px_inicio, y_precio), "S/", font=f_ps, fill=azul_oscuro, anchor="lm")
             draw.text((px_inicio + draw.textlength("S/", font=f_ps) + 8, y_precio), p_val, font=f_pv, fill=azul_oscuro, anchor="lm")
@@ -156,8 +186,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "DISPLAY":
             pi.thumbnail((483, 483)); img.paste(pi, (423, 25), pi); cx, ny = 255, 245 
             draw.text((cx, 195), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
-            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
-            for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 27 
+            # AJUSTE: nombre auto-ajustable (máx 3 líneas, reduce fuente si es muy largo). Centrado.
+            lineas_nombre, f_nom, alto_l = ajustar_nombre(draw, row['Nombre del producto'], ruta_bold, size_max=20, size_min=13, ancho_max=330, max_lineas=3)
+            for l in lineas_nombre: draw.text((cx, ny), l, font=f_nom, fill=txt_c, anchor="mt"); ny += alto_l
             tw = draw.textlength("S/", font=f_ps) + draw.textlength(precio_val, font=f_pv) + 15; px = cx - tw//2
             draw.text((px, ny + 55), "S/ ", font=f_ps, fill=txt_c, anchor="lm"); draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, ny + 55), precio_val, font=f_pv, fill=txt_c, anchor="lm")
             draw.text((cx, ny + 100), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
@@ -167,8 +198,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "STORY":
             pi = pi.resize((845, 845), Image.Resampling.LANCZOS); img.paste(pi, (140, 630), pi); cx_textos, anchor_y_textos = 150, 1482 
             draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt"); ny = anchor_y_textos + 65 
-            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
-            for l in lineas_nombre: draw.text((cx_textos, ny), l, font=f_p, fill=txt_c, anchor="lt"); ny += 40 
+            # AJUSTE: nombre auto-ajustable (máx 3 líneas, reduce fuente si es muy largo). Alineado a la izquierda.
+            lineas_nombre, f_nom, alto_l = ajustar_nombre(draw, row['Nombre del producto'], ruta_bold, size_max=32, size_min=22, ancho_max=460, max_lineas=3)
+            for l in lineas_nombre: draw.text((cx_textos, ny), l, font=f_nom, fill=txt_c, anchor="lt"); ny += alto_l
             anchor_y_precio, p_v, espacio_entre_simbolo = 1540, precio_val, 20
             tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo; px_bloque_completo = 810 - tw//2
             draw.text((px_bloque_completo, anchor_y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_bloque_completo + draw.textlength("S/", font=f_ps) + espacio_entre_simbolo; draw.text((px_numero, anchor_y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
@@ -181,8 +213,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             tw_precio = w_simbolo + w_monto + espacio_interno; eje_x_derecha = 820; px_inicio_bloque = eje_x_derecha - tw_precio // 2 
             draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_inicio_bloque + w_simbolo + espacio_interno; draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls"); draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
             cx = 200; draw.text((cx, y_base_alineacion), row['Marca'], font=f_m, fill=txt_c, anchor="ls"); ny = y_base_alineacion + 10 
-            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=25)[:2]
-            for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="lt"); ny += 30
+            # AJUSTE: nombre auto-ajustable (máx 3 líneas, reduce fuente si es muy largo). Alineado a la izquierda.
+            lineas_nombre, f_nom, alto_l = ajustar_nombre(draw, row['Nombre del producto'], ruta_bold, size_max=23, size_min=15, ancho_max=470, max_lineas=3)
+            for l in lineas_nombre: draw.text((cx, ny), l, font=f_nom, fill=txt_c, anchor="lt"); ny += alto_l
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 13); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((50, 990), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=990, x_start=50, x_end=1030, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
 
