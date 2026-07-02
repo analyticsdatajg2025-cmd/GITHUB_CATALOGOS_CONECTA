@@ -152,11 +152,16 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             box_w, box_h = 456, 456; img_size = 338; gap_y = 30; y_offset_img = 20
         else:
             box_w, box_h = 456, 375; img_size = 250; gap_y = 15; y_offset_img = 10
+
+        # AJUSTE: si es flyer de 4 productos, bajamos el bloque de productos 180px
+        # (solo hay 2 filas, así que hay margen de sobra antes de los legales fijos)
+        y_base = 340 + 180 if num_productos == 4 else 340
+
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
             try: p_val = "{:,}".format(int(float(p['Precio desc'])))
             except: p_val = str(p['Precio desc'])
-            xp = 64 + (i % 2) * (box_w + 40); yp = 340 + (i // 2) * (box_h + gap_y)
+            xp = 64 + (i % 2) * (box_w + 40); yp = y_base + (i // 2) * (box_h + gap_y)
             # AJUSTE: Se quita el borde azul de la caja blanca de cada producto (sin outline)
             draw.rounded_rectangle([xp, yp, xp+box_w, yp+box_h], radius=15, fill=(255,255,255))
             try:

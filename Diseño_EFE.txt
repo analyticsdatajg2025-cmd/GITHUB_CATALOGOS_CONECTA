@@ -207,6 +207,15 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         total_content_h = (rows * box_h) + ((rows - 1) * 12)
         y_centering_offset = (available_h - total_content_h) // 2
         current_y_top = y_limit_top + y_centering_offset
+
+        # AJUSTE: cuando el flyer tiene exactamente 4 productos (2 filas reales dentro de un
+        # bloque calculado para 3 filas) queda mucho vacío abajo. Bajamos el bloque ~180px
+        # extra para que se vea más centrado respecto al espacio realmente ocupado.
+        # Los legales (1835) no se tocan; con 2 filas de box_h=430 el bloque baja hasta
+        # current_y_top + 872, dejando margen de sobra antes de los legales.
+        if num_prod == 4:
+            current_y_top += 180
+
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
             xp, yp = 65 + (i % 2) * 495, current_y_top + (i // 2) * (box_h + 12)
