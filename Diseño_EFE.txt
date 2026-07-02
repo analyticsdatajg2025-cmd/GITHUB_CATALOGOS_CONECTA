@@ -214,7 +214,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         # Los legales (1835) no se tocan; con 2 filas de box_h=430 el bloque baja hasta
         # current_y_top + 872, dejando margen de sobra antes de los legales.
         if num_prod == 4:
-            current_y_top += 180
+            current_y_top += 230
 
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break

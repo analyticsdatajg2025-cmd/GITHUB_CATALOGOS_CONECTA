@@ -155,7 +155,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
         # AJUSTE: si es flyer de 4 productos, bajamos el bloque de productos 180px
         # (solo hay 2 filas, así que hay margen de sobra antes de los legales fijos)
-        y_base = 340 + 180 if num_productos == 4 else 340
+        y_base = 340 + 230 if num_productos == 4 else 340
 
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
