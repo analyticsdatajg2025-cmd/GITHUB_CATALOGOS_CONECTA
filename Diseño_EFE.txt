@@ -265,7 +265,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "PPL":
             if "EFERTON" in tipo:
                 # AJUSTE: Replica del diseño de IRRESISTIBLE pero SOLO con preciador (sin precio en texto)
-                pi.thumbnail((682, 682)); img.paste(pi, (310, 287), pi)
+                # AJUSTE EFERTON: imagen bajada 40px (287 -> 327). El resto queda igual.
+                pi.thumbnail((682, 682)); img.paste(pi, (310, 327), pi)
                 draw.text((91, 639), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
                 ny = 675
                 # AJUSTE: nombre auto-ajustable (máx 4 líneas, reduce fuente si es muy largo)
@@ -324,7 +325,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
         elif formato == "DISPLAY":
             if "EFERTON" in tipo:
-                pi.thumbnail((510, 510)); img.paste(pi, (430, 10), pi); cx = 260
+                # AJUSTE EFERTON: imagen 10px más pequeña por lado (510 -> 500),
+                # bajada 10px (10 -> 20) y movida 10px a la izquierda (430 -> 420).
+                # El borde inferior de la imagen queda igual que antes (20+500 = 10+510 = 520),
+                # así que no se acerca más a los legales (y=485, que corren en la columna izquierda).
+                pi.thumbnail((500, 500)); img.paste(pi, (420, 20), pi); cx = 260
                 draw.text((cx, 250), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")
                 ny = 290
                 # AJUSTE: nombre auto-ajustable (máx 3 líneas en vez de 2, reduce fuente si es muy largo). Centrado.
