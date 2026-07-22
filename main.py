@@ -140,8 +140,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
         wf = draw.textlength(f_txt, font=f_f)
         # AJUSTE: Fecha centrada. Se calcula la X para que el recuadro quede en el centro del lienzo (1080 px)
-        # AJUSTE: Fecha arriba, comenzando en X=815 (alineada a la izquierda desde ese punto)
-        x_fecha = 815
+        # AJUSTE: Fecha arriba, comenzando en X=800 (alineada a la izquierda desde ese punto)
+        x_fecha = 800
         # AJUSTE: Color Blanco para fecha y contorno en el Flyer
         color_blanco = (255, 255, 255)
         # AJUSTE DSCTOS POWER: legales en blanco. Para los demás tipos se mantiene el azul.
@@ -221,12 +221,14 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 14); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((65, 1802), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=1802, x_start=65, x_end=1015, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "PPL":
-            # AJUSTE DSCTOS POWER: bajar la imagen 60px (30 previos + 30 nuevos) y los
-            # textos (marca, nombre, precio, SKU) 55px (25 previos + 30 nuevos).
+            # AJUSTE DSCTOS POWER: bajar la imagen 85px (60 previos + 25 nuevos) y los
+            # textos (marca, nombre, precio, SKU) 55px. Imagen reducida 5px por lado.
             # Los legales quedan fijos en y=990; más abajo hay una guardia que reduce la
             # fuente del nombre si con 3 líneas llegara a invadir los legales.
-            dy_img = 60 if es_power else 0; dy_txt = 55 if es_power else 0
-            pi.thumbnail((779, 598), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2; py_posicion = 240 + dy_img; img.paste(pi, (px_centrado, py_posicion), pi); y_base_alineacion, y_precio = 850 + dy_txt, 865 + dy_txt 
+            dy_img = 85 if es_power else 0; dy_txt = 55 if es_power else 0
+            # AJUSTE DSCTOS POWER: imagen 5px más pequeña por lado (779x598 -> 774x593)
+            tam_img = (774, 593) if es_power else (779, 598)
+            pi.thumbnail(tam_img, Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2; py_posicion = 240 + dy_img; img.paste(pi, (px_centrado, py_posicion), pi); y_base_alineacion, y_precio = 850 + dy_txt, 865 + dy_txt 
             p_v, w_simbolo, w_monto, espacio_interno = precio_val, draw.textlength("S/", font=f_ps), draw.textlength(precio_val, font=f_pv), 15
             tw_precio = w_simbolo + w_monto + espacio_interno; eje_x_derecha = 820; px_inicio_bloque = eje_x_derecha - tw_precio // 2 
             draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_inicio_bloque + w_simbolo + espacio_interno; draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls"); draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
