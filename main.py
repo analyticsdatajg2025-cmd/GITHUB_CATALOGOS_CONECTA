@@ -106,6 +106,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     tipo, formato = str(row['Tipo de diseño']).strip(), str(row['Formato']).upper().strip()
     path_fonts, path_fondos = "TIPOGRAFIA/LC", f"FONDOS/LC/{tipo}"
     ruta_bold = f"{path_fonts}/HurmeGeometricSans1 Bold.otf"
+
+    # AJUSTE DSCTOS POWER: flag para aplicar los cambios solo a este tipo de diseño
+    es_power = tipo == "DSCTOS POWER"
     
     txt_c = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
     border_c = (254, 215, 0) if color_version == "AMARILLO" else (10, 6, 60)
@@ -141,8 +144,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         x_fecha = (1080 - ancho_recuadro) // 2
         # AJUSTE: Color Blanco para fecha y contorno en el Flyer
         color_blanco = (255, 255, 255)
-        # AJUSTE: Color Azul para legales en el Flyer
+        # AJUSTE DSCTOS POWER: legales en blanco. Para los demás tipos se mantiene el azul.
         azul_legales = (10, 6, 60)
+        color_legales = (255, 255, 255) if es_power else azul_legales
         # AJUSTE: Se quita el borde/recuadro blanco de la fecha (solo queda el texto)
         draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=color_blanco, anchor="mm")
         
@@ -181,16 +185,18 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((px_inicio + draw.textlength("S/", font=f_ps) + 8, y_precio), p_val, font=f_pv, fill=azul_oscuro, anchor="lm")
             draw.text((cr, y_precio + 35), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
         
-        # AJUSTE: Legales en Azul para Flyer (conservando "CONDICIONES GENERALES:" en negrita)
+        # AJUSTE: Legales del Flyer (blanco para DSCTOS POWER, azul para el resto). "CONDICIONES GENERALES:" en negrita
         y_legales_fijo = 1815; f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
-        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=azul_legales)
-        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, azul_legales, line_spacing=2, prefix_width=ancho_negrita)
+        draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=color_legales)
+        draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, color_legales, line_spacing=2, prefix_width=ancho_negrita)
     else:
         # Otros formatos mantienen txt_c (Amarillo/Blanco según versión)
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         if formato == "DISPLAY":
-            pi.thumbnail((483, 483)); img.paste(pi, (423, 25), pi); cx, ny = 255, 245 
-            draw.text((cx, 195), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
+            # AJUSTE DSCTOS POWER: bajar en bloque 10px la imagen, marca, nombre, precio y SKU (legales fijos)
+            dy = 10 if es_power else 0
+            pi.thumbnail((483, 483)); img.paste(pi, (423, 25 + dy), pi); cx, ny = 255, 245 + dy
+            draw.text((cx, 195 + dy), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
             # AJUSTE: nombre auto-ajustable (máx 3 líneas, reduce fuente si es muy largo). Centrado.
             lineas_nombre, f_nom, alto_l = ajustar_nombre(draw, row['Nombre del producto'], ruta_bold, size_max=20, size_min=13, ancho_max=330, max_lineas=3)
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_nom, fill=txt_c, anchor="mt"); ny += alto_l
@@ -201,6 +207,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((40, 485), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=485, x_start=40, x_end=960, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "STORY":
+            # AJUSTE DSCTOS POWER: todos los textos en blanco (marca, nombre, precio, SKU y legales)
+            if es_power: txt_c = (255, 255, 255)
             pi = pi.resize((845, 845), Image.Resampling.LANCZOS); img.paste(pi, (140, 630), pi); cx_textos, anchor_y_textos = 150, 1482 
             draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt"); ny = anchor_y_textos + 65 
             # AJUSTE: nombre auto-ajustable (máx 3 líneas, reduce fuente si es muy largo). Alineado a la izquierda.
@@ -213,7 +221,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 14); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((65, 1802), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=1802, x_start=65, x_end=1015, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "PPL":
-            pi.thumbnail((779, 598), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2; py_posicion = 240; img.paste(pi, (px_centrado, py_posicion), pi); y_base_alineacion, y_precio = 850, 865 
+            # AJUSTE DSCTOS POWER: bajar la imagen 20px (el resto de elementos se mantiene)
+            pi.thumbnail((779, 598), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2; py_posicion = 240 + (20 if es_power else 0); img.paste(pi, (px_centrado, py_posicion), pi); y_base_alineacion, y_precio = 850, 865 
             p_v, w_simbolo, w_monto, espacio_interno = precio_val, draw.textlength("S/", font=f_ps), draw.textlength(precio_val, font=f_pv), 15
             tw_precio = w_simbolo + w_monto + espacio_interno; eje_x_derecha = 820; px_inicio_bloque = eje_x_derecha - tw_precio // 2 
             draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_inicio_bloque + w_simbolo + espacio_interno; draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls"); draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
@@ -226,7 +235,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
     sku_limpio = str(row['SKU'] or row['ID_Flyer']).replace("/", "-").replace("\\", "-")
     fname = f"{sku_limpio}_{formato}_{color_version}.jpg"
-    img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
+    # AJUSTE: subsampling=0 evita el submuestreo de color del JPG, que era lo que
+    # hacía ver borrosos los textos pequeños (legales del DISPLAY). quality sube a 97.
+    img.save(f"output/{fname}", quality=97, subsampling=0); return f"{RAW_URL}{fname}"
 
 # --- BUCLE DE EJECUCIÓN PRINCIPAL ---
 data, res_sheet, viejos = get_sheets_data()
