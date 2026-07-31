@@ -168,7 +168,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 if url_foto:
                     pi_fly = Image.open(BytesIO(requests.get(url_foto, timeout=10).content)).convert("RGBA")
                     pi_fly.thumbnail((img_size_w, img_size_h))
-                    img.paste(pi_fly, (int(xp + 240 - pi_fly.width // 2), int(yp + 20)), pi_fly)
+                    # AJUSTE: se sube la imagen 10px (antes yp + 20)
+                    img.paste(pi_fly, (int(xp + 240 - pi_fly.width // 2), int(yp + 10)), pi_fly)
             except: pass
             cx_col1, cx_col2 = xp + 125, xp + 345
             f_m_flyer = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 28)
@@ -200,7 +201,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado'], timeout=10).content)).convert("RGBA")
         if formato == "PPL":
             if "EFERTON" in tipo:
-                pi.thumbnail((797, 820)); img.paste(pi, (126, 148), pi)
+                # AJUSTE: imagen reducida 50px por lado (antes 797 x 820)
+                pi.thumbnail((747, 770)); img.paste(pi, (126, 148), pi)
                 draw.text((90, 930), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
                 lines = textwrap.wrap(str(row['Nombre del producto']), width=25); ny = 890 if len(lines) > 1 else 900
                 for line in lines[:3]: draw.text((500, ny), line, font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25), fill=(255,255,255), anchor="mm"); ny += 28
@@ -219,10 +221,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "STORY":
             if "EFERTON" in tipo:
                 pi.thumbnail((956, 956)); img.paste(pi, (72, 606), pi); ay = 1600
-                draw.text((239, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
+                # AJUSTE: marca, nombre y SKU corridos 20px a la izquierda (antes x = 239)
+                x_txt = 219
+                draw.text((x_txt, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
                 ny = ay + 55
-                for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((239, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 45
-                y_s = ny + 5; draw.text((239, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
+                for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((x_txt, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 45
+                y_s = ny + 5; draw.text((x_txt, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
                 draw_efe_preciador(draw, 780, 1650, "S/", precio_val, ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64), ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110), scale=1.1, padding_h=30)
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
             else:
@@ -236,7 +240,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
         elif formato == "DISPLAY":
             if "EFERTON" in tipo:
-                pi.thumbnail((510, 510)); img.paste(pi, (430, 25), pi); cx = 260
+                # AJUSTE: imagen reducida 50px por lado (antes 510 x 510)
+                pi.thumbnail((460, 460)); img.paste(pi, (430, 25), pi); cx = 260
                 draw.text((cx, 250), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")
                 ny = 290
                 for line in textwrap.wrap(str(row['Nombre del producto']), width=20)[:2]: draw.text((cx, ny), line, font=f_p, fill=(255,255,255), anchor="mm"); ny += 25
