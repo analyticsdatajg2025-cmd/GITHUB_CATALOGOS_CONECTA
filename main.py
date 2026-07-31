@@ -235,8 +235,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado'], timeout=10).content)).convert("RGBA")
         if formato == "PPL":
             if "EFERTON" in tipo:
-                # AJUSTE: imagen -20px por lado (727x750), +10px en X y +25px en Y
-                pi.thumbnail((727, 750)); img.paste(pi, (136, 173), pi)
+                # AJUSTE: imagen -80px por lado (647x670), +20px en X y +70px en Y
+                pi.thumbnail((647, 670)); img.paste(pi, (156, 243), pi)
                 draw.text((90, 930), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
 
                 # --- NOMBRE DEL PRODUCTO CON MARGEN RESPECTO AL PRECIADOR ---
@@ -270,10 +270,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "STORY":
             if "EFERTON" in tipo:
                 pi.thumbnail((956, 956)); img.paste(pi, (72, 606), pi); ay = 1600
-                # AJUSTE: marca, nombre y SKU corridos 20px a la izquierda (antes x = 239)
-                x_txt = 219
+                # AJUSTE: marca, nombre y SKU corridos otros 10px a la izquierda (antes 219, original 239)
+                x_txt = 209
                 draw.text((x_txt, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
-                # AJUSTE: interlineado y separaciones mas compactas (antes +55 / +45 / +5)
+                # Interlineado y separaciones compactas (antes +55 / +45 / +5)
                 GAP_MARCA_NOMBRE = 48
                 LH_NOMBRE = 36
                 GAP_NOMBRE_SKU = 32
