@@ -15,6 +15,33 @@ USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
+def wrap_text_pixel(draw, text, font, max_width, max_lines=4):
+    """Corta el texto por ancho REAL en pixeles (no por cantidad de caracteres).
+    Ademas rebalancea si la ultima linea quedaria con una sola palabra suelta."""
+    words = str(text).split()
+    lines, cur = [], []
+    for w in words:
+        test = " ".join(cur + [w])
+        if not cur or draw.textlength(test, font=font) <= max_width:
+            cur.append(w)
+        else:
+            lines.append(" ".join(cur))
+            cur = [w]
+    if cur:
+        lines.append(" ".join(cur))
+
+    # Rebalanceo: evita "una palabra por fila" al final
+    if len(lines) >= 2 and len(lines[-1].split()) == 1 and len(lines[-2].split()) > 1:
+        prev = lines[-2].split()
+        moved = prev.pop()
+        cand_prev = " ".join(prev)
+        cand_last = moved + " " + lines[-1]
+        if cand_prev and draw.textlength(cand_last, font=font) <= max_width:
+            lines[-2] = cand_prev
+            lines[-1] = cand_last
+
+    return lines[:max_lines]
+
 def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing_offset=0, force_justify=False):
     prefix = "CONDICIONES GENERALES: "
     if text.startswith("CONDICIONES GENERALES"):
@@ -85,6 +112,13 @@ def draw_dotted_line(draw, start, end, fill, width=2, gap=8):
         s = (curr_x + sx * i, curr_y + sy * i)
         e = (curr_x + sx * (i + gap), curr_y + sy * (i + gap))
         draw.line([s, e], fill=fill, width=width)
+
+def preciador_width(draw, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2, padding_h=20):
+    """Devuelve el ancho total (con padding) que ocupara el preciador naranja."""
+    num_w = sum(draw.textlength(char, font=f_pv) + tracking for char in text_price) - tracking
+    sym_w = draw.textlength(text_s, font=f_ps)
+    gap = 8 * scale
+    return sym_w + gap + num_w + (padding_h * scale * 2)
 
 def draw_efe_preciador(draw, x_center, y_center, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2, padding_h=20):
     num_w = sum(draw.textlength(char, font=f_pv) + tracking for char in text_price) - tracking 
@@ -201,13 +235,28 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado'], timeout=10).content)).convert("RGBA")
         if formato == "PPL":
             if "EFERTON" in tipo:
-                # AJUSTE: imagen reducida 50px por lado (antes 797 x 820)
-                pi.thumbnail((747, 770)); img.paste(pi, (126, 148), pi)
+                # AJUSTE: imagen -20px por lado (727x750), +10px en X y +25px en Y
+                pi.thumbnail((727, 750)); img.paste(pi, (136, 173), pi)
                 draw.text((90, 930), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
-                lines = textwrap.wrap(str(row['Nombre del producto']), width=25); ny = 890 if len(lines) > 1 else 900
-                for line in lines[:3]: draw.text((500, ny), line, font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25), fill=(255,255,255), anchor="mm"); ny += 28
-                draw.text((500, ny + 5), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22), fill=(255,255,255), anchor="mm")
-                draw_efe_preciador(draw, 840, 910, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
+
+                # --- NOMBRE DEL PRODUCTO CON MARGEN RESPECTO AL PRECIADOR ---
+                f_nom_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25)
+                CX_NOMBRE = 500          # centro del bloque de nombre
+                PREC_CX = 840            # centro del preciador
+                MARGEN_PREC = 45         # aire minimo entre nombre y preciador
+                prec_w = preciador_width(draw, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
+                prec_left = PREC_CX - (prec_w / 2)
+                max_w_nombre = max(180, int((prec_left - MARGEN_PREC - CX_NOMBRE) * 2))
+                lines = wrap_text_pixel(draw, row['Nombre del producto'], f_nom_ppl, max_w_nombre, max_lines=3)
+
+                if len(lines) >= 3:   ny = 880
+                elif len(lines) == 2: ny = 890
+                else:                 ny = 900
+                for line in lines:
+                    draw.text((CX_NOMBRE, ny), line, font=f_nom_ppl, fill=(255,255,255), anchor="mm"); ny += 28
+                draw.text((CX_NOMBRE, ny + 5), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22), fill=(255,255,255), anchor="mm")
+
+                draw_efe_preciador(draw, PREC_CX, 910, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
                 draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 990, (255,255,255), force_justify=True)
             else: 
                 pi.thumbnail((682, 682)); img.paste(pi, (310, 287), pi)
@@ -224,9 +273,19 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # AJUSTE: marca, nombre y SKU corridos 20px a la izquierda (antes x = 239)
                 x_txt = 219
                 draw.text((x_txt, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
-                ny = ay + 55
-                for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((x_txt, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 45
-                y_s = ny + 5; draw.text((x_txt, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
+                # AJUSTE: interlineado y separaciones mas compactas (antes +55 / +45 / +5)
+                GAP_MARCA_NOMBRE = 48
+                LH_NOMBRE = 36
+                GAP_NOMBRE_SKU = 32
+                ny = ay + GAP_MARCA_NOMBRE
+                lineas_nom = textwrap.wrap(str(row['Nombre del producto']), width=20)[:4]
+                last_baseline = ny
+                for lp in lineas_nom:
+                    draw.text((x_txt, ny), lp, font=f_p, fill=(255,255,255), anchor="ls")
+                    last_baseline = ny
+                    ny += LH_NOMBRE
+                y_s = last_baseline + GAP_NOMBRE_SKU
+                draw.text((x_txt, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
                 draw_efe_preciador(draw, 780, 1650, "S/", precio_val, ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64), ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110), scale=1.1, padding_h=30)
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
             else:
@@ -240,8 +299,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
         elif formato == "DISPLAY":
             if "EFERTON" in tipo:
-                # AJUSTE: imagen reducida 50px por lado (antes 510 x 510)
-                pi.thumbnail((460, 460)); img.paste(pi, (430, 25), pi); cx = 260
+                # AJUSTE: imagen 460x460 y +10px en X (antes 430)
+                pi.thumbnail((460, 460)); img.paste(pi, (440, 25), pi); cx = 260
                 draw.text((cx, 250), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")
                 ny = 290
                 for line in textwrap.wrap(str(row['Nombre del producto']), width=20)[:2]: draw.text((cx, ny), line, font=f_p, fill=(255,255,255), anchor="mm"); ny += 25
