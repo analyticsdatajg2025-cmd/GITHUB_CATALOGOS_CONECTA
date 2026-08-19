@@ -14,6 +14,21 @@ USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
+# --- AJUSTES PARA PIEZAS SIN PRECIO (separación entre nombre y SKU) ---
+GAP_SKU_SIN_PRECIO = {"DISPLAY": 15, "STORY": 12, "PPL": 6, "FLYER": 2}
+
+def tiene_precio(valor):
+    """True si la celda 'Precio desc' trae algo válido para pintar."""
+    if valor is None:
+        return False
+    s = str(valor).strip()
+    if s == "" or s.lower() in ("nan", "none", "-", "0", "0.0"):
+        return False
+    try:
+        return float(s.replace(",", "")) > 0
+    except:
+        return True  # texto tipo "GRATIS" o similar: se respeta
+
 def quitar_fondo_blanco(img):
     return img
 
@@ -82,6 +97,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     txt_c = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
     border_c = (254, 215, 0) if color_version == "AMARILLO" else (10, 6, 60)
 
+    hay_precio = tiene_precio(row.get('Precio desc'))
     try:
         precio_val = "{:,}".format(int(float(row['Precio desc'])))
     except:
@@ -122,6 +138,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             box_w, box_h = 456, 375; img_size = 250; gap_y = 15; y_offset_img = 10
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
+            p_hay_precio = tiene_precio(p.get('Precio desc'))
             try: p_val = "{:,}".format(int(float(p['Precio desc'])))
             except: p_val = str(p['Precio desc'])
             xp = 64 + (i % 2) * (box_w + 40); yp = 340 + (i // 2) * (box_h + gap_y)
@@ -130,16 +147,29 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 pi_url = p['Foto del producto calado']; pi = Image.open(BytesIO(requests.get(pi_url).content)).convert("RGBA"); pi.thumbnail((img_size, img_size), Image.Resampling.LANCZOS)
                 img.paste(pi, (int(xp + (box_w - pi.width) // 2), int(yp + y_offset_img)), pi)
             except: pass
-            cl, cr = xp + 114, xp + 342; y_marca_prod = yp + box_h - 86 
+
+            y_marca_prod = yp + box_h - 86
             f_m_fly = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 20 if len(p['Marca']) < 12 else 16)
-            draw.text((cl, y_marca_prod), p['Marca'], font=f_m_fly, fill=azul_oscuro, anchor="mm")
-            ny = y_marca_prod + 25 
-            for ln in textwrap.wrap(p['Nombre del producto'], width=18)[:2]:
-                draw.text((cl, ny), ln, font=f_p, fill=azul_oscuro, anchor="mm"); ny += 20
-            y_precio = yp + box_h - 57; tw_p = draw.textlength("S/", font=f_ps) + draw.textlength(p_val, font=f_pv) + 8; px_inicio = cr - tw_p // 2
-            draw.text((px_inicio, y_precio), "S/", font=f_ps, fill=azul_oscuro, anchor="lm")
-            draw.text((px_inicio + draw.textlength("S/", font=f_ps) + 8, y_precio), p_val, font=f_pv, fill=azul_oscuro, anchor="lm")
-            draw.text((cr, y_precio + 35), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
+
+            if p_hay_precio:
+                # --- Layout original: 2 columnas (marca/nombre | precio/sku) ---
+                cl, cr = xp + 114, xp + 342
+                draw.text((cl, y_marca_prod), p['Marca'], font=f_m_fly, fill=azul_oscuro, anchor="mm")
+                ny = y_marca_prod + 25 
+                for ln in textwrap.wrap(p['Nombre del producto'], width=18)[:2]:
+                    draw.text((cl, ny), ln, font=f_p, fill=azul_oscuro, anchor="mm"); ny += 20
+                y_precio = yp + box_h - 57; tw_p = draw.textlength("S/", font=f_ps) + draw.textlength(p_val, font=f_pv) + 8; px_inicio = cr - tw_p // 2
+                draw.text((px_inicio, y_precio), "S/", font=f_ps, fill=azul_oscuro, anchor="lm")
+                draw.text((px_inicio + draw.textlength("S/", font=f_ps) + 8, y_precio), p_val, font=f_pv, fill=azul_oscuro, anchor="lm")
+                draw.text((cr, y_precio + 35), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
+            else:
+                # --- Sin precio: 1 sola columna centrada, SKU debajo del nombre ---
+                cc = xp + box_w // 2
+                draw.text((cc, y_marca_prod), p['Marca'], font=f_m_fly, fill=azul_oscuro, anchor="mm")
+                ny = y_marca_prod + 25
+                for ln in textwrap.wrap(p['Nombre del producto'], width=26)[:2]:
+                    draw.text((cc, ny), ln, font=f_p, fill=azul_oscuro, anchor="mm"); ny += 20
+                draw.text((cc, ny + GAP_SKU_SIN_PRECIO["FLYER"]), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
         
         # AJUSTE: Legales en Blanco para Flyer
         y_legales_fijo = 1815; f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
@@ -153,31 +183,43 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((cx, 195), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 27 
-            tw = draw.textlength("S/", font=f_ps) + draw.textlength(precio_val, font=f_pv) + 15; px = cx - tw//2
-            draw.text((px, ny + 55), "S/ ", font=f_ps, fill=txt_c, anchor="lm"); draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, ny + 55), precio_val, font=f_pv, fill=txt_c, anchor="lm")
-            draw.text((cx, ny + 100), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
+            if hay_precio:
+                tw = draw.textlength("S/", font=f_ps) + draw.textlength(precio_val, font=f_pv) + 15; px = cx - tw//2
+                draw.text((px, ny + 55), "S/ ", font=f_ps, fill=txt_c, anchor="lm"); draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, ny + 55), precio_val, font=f_pv, fill=txt_c, anchor="lm")
+                draw.text((cx, ny + 100), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
+            else:
+                # Sin precio: el SKU sube y queda pegado al nombre
+                draw.text((cx, ny + GAP_SKU_SIN_PRECIO["DISPLAY"]), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 9); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
             draw.text((40, 485), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=485, x_start=40, x_end=960, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "STORY":
             pi = pi.resize((845, 845), Image.Resampling.LANCZOS); img.paste(pi, (140, 630), pi); cx_textos, anchor_y_textos = 150, 1482 
             draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt"); ny = anchor_y_textos + 65 
-            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
+            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22 if hay_precio else 34)[:2]
             for l in lineas_nombre: draw.text((cx_textos, ny), l, font=f_p, fill=txt_c, anchor="lt"); ny += 40 
-            anchor_y_precio, p_v, espacio_entre_simbolo = 1540, precio_val, 20
-            tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo; px_bloque_completo = 810 - tw//2
-            draw.text((px_bloque_completo, anchor_y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_bloque_completo + draw.textlength("S/", font=f_ps) + espacio_entre_simbolo; draw.text((px_numero, anchor_y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
-            draw.text((810, anchor_y_precio + 40), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
+            if hay_precio:
+                anchor_y_precio, p_v, espacio_entre_simbolo = 1540, precio_val, 20
+                tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo; px_bloque_completo = 810 - tw//2
+                draw.text((px_bloque_completo, anchor_y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_bloque_completo + draw.textlength("S/", font=f_ps) + espacio_entre_simbolo; draw.text((px_numero, anchor_y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
+                draw.text((810, anchor_y_precio + 40), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
+            else:
+                # Sin precio: 1 sola columna, SKU debajo del nombre
+                draw.text((cx_textos, ny + GAP_SKU_SIN_PRECIO["STORY"]), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="lt")
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 14); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((65, 1802), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=1802, x_start=65, x_end=1015, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "PPL":
             pi.thumbnail((779, 598), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2; py_posicion = 240; img.paste(pi, (px_centrado, py_posicion), pi); y_base_alineacion, y_precio = 850, 865 
-            p_v, w_simbolo, w_monto, espacio_interno = precio_val, draw.textlength("S/", font=f_ps), draw.textlength(precio_val, font=f_pv), 15
-            tw_precio = w_simbolo + w_monto + espacio_interno; eje_x_derecha = 820; px_inicio_bloque = eje_x_derecha - tw_precio // 2 
-            draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_inicio_bloque + w_simbolo + espacio_interno; draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls"); draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
+            if hay_precio:
+                p_v, w_simbolo, w_monto, espacio_interno = precio_val, draw.textlength("S/", font=f_ps), draw.textlength(precio_val, font=f_pv), 15
+                tw_precio = w_simbolo + w_monto + espacio_interno; eje_x_derecha = 820; px_inicio_bloque = eje_x_derecha - tw_precio // 2 
+                draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_inicio_bloque + w_simbolo + espacio_interno; draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls"); draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
             cx = 200; draw.text((cx, y_base_alineacion), row['Marca'], font=f_m, fill=txt_c, anchor="ls"); ny = y_base_alineacion + 10 
-            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=25)[:2]
+            lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=25 if hay_precio else 40)[:2]
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="lt"); ny += 30
+            if not hay_precio:
+                # Sin precio: 1 sola columna, SKU debajo del nombre
+                draw.text((cx, ny + GAP_SKU_SIN_PRECIO["PPL"]), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="lt")
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 13); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((50, 990), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=990, x_start=50, x_end=1030, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
 
@@ -230,5 +272,3 @@ if archivos_generados == 0:
     print("⚠️ No se generaron archivos nuevos.")
     with open("last_run.txt", "w") as f:
         f.write(f"Sin cambios: {h_lima}")
-
-
