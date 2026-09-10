@@ -293,8 +293,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 px_img = 277 if es_aniv else 217  # AJUSTE: producto centrado en versión EFERTON (antes 156)
                 img.paste(pi, (px_img, 183), pi)  # AJUSTE: sube más para centralizar (antes 223; original 243)
 
-                f_marca_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
-                mx = 990 if es_aniv else 220  # AJUSTE: marca más pegada a la derecha (antes 190; original 90)
+                f_marca_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 30)
+                mx = 990 if es_aniv else 210  # AJUSTE: marca más pegada a la derecha (antes 190; original 90)
                 m_anchor = "rs" if es_aniv else "ls"
                 draw.text((mx, 870), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor=m_anchor)  # AJUSTE: sube más (antes 910; original 930)
 
