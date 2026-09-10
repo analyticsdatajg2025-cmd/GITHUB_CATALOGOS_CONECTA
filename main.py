@@ -161,6 +161,18 @@ def get_sheets_data():
     sheet = client.open_by_key("1PmvCyC3d0VvvZSdvWM73NYusrYevVYtRzVs2gbxjw1M")
     data = pd.DataFrame(sheet.worksheet("Hoja 1").get_all_records())
     data.columns = [c.strip() for c in data.columns]
+
+    # FIX: normaliza el nombre de la columna de marca (Tienda o RETAIL), sin importar mayúsculas
+    col_map = {c.lower(): c for c in data.columns}
+    col_tienda_real = next((col_map[c] for c in ['tienda', 'retail'] if c in col_map), None)
+    if col_tienda_real is None:
+        raise KeyError(
+            "No se encontró una columna de marca ('Tienda' o 'RETAIL') en 'Hoja 1'. "
+            f"Columnas detectadas: {list(data.columns)}"
+        )
+    if col_tienda_real != 'Tienda':
+        data = data.rename(columns={col_tienda_real: 'Tienda'})
+
     res_sheet = sheet.worksheet("Resultados")
     v_act = res_sheet.get_all_values()
     viejos = {r[1].strip().upper() for r in v_act[1:] if len(r) > 1}
