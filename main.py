@@ -294,7 +294,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 img.paste(pi, (px_img, 183), pi)  # AJUSTE: sube más para centralizar (antes 223; original 243)
 
                 f_marca_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
-                mx = 990 if es_aniv else 90
+                mx = 990 if es_aniv else 190  # AJUSTE: marca más pegada a la derecha (antes 90)
                 m_anchor = "rs" if es_aniv else "ls"
                 draw.text((mx, 870), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor=m_anchor)  # AJUSTE: sube más (antes 910; original 930)
 
@@ -412,7 +412,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     # --- GUARDADO FINAL (SKU LIMPIO) ---
     sku_limpio = str(row['SKU'] or row['ID_Flyer']).replace("/", "-").replace("\\", "-")
     fname = f"{sku_limpio}_{formato}_{tienda}.jpg"
-    img.save(f"output/{fname}", quality=100); return f"{RAW_URL}{fname}"
+    img.save(f"output/{fname}", quality=100, subsampling=0); return f"{RAW_URL}{fname}"
 
 def resolver_columna(df, nombre_buscado):
     """Devuelve el nombre REAL de la columna en df que coincide con nombre_buscado
