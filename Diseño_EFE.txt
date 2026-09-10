@@ -15,6 +15,51 @@ USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
+# --- AJUSTES PARA PIEZAS SIN PRECIO ---
+STORY_X_SIN_PRECIO = 540   # centro del bloque de texto en STORY al pasar a 1 columna
+PPL_X_FIN_ZONA     = 990   # limite derecho util para el nombre en PPL sin precio
+PPL_MARGEN_MARCA   = 45    # aire entre la marca y el bloque de nombre en PPL sin precio
+FLYER_GAP_SKU      = 4     # separacion extra entre nombre y SKU en el flyer sin precio
+
+def tiene_precio(valor):
+    """True si la celda 'Precio desc' trae algo valido para pintar."""
+    if valor is None:
+        return False
+    s = str(valor).strip()
+    if s == "" or s.lower() in ("nan", "none", "-", "0", "0.0"):
+        return False
+    try:
+        return float(s.replace(",", "")) > 0
+    except:
+        return True  # texto tipo "GRATIS" o similar: se respeta
+
+def wrap_text_pixel(draw, text, font, max_width, max_lines=4):
+    """Corta el texto por ancho REAL en pixeles (no por cantidad de caracteres).
+    Ademas rebalancea si la ultima linea quedaria con una sola palabra suelta."""
+    words = str(text).split()
+    lines, cur = [], []
+    for w in words:
+        test = " ".join(cur + [w])
+        if not cur or draw.textlength(test, font=font) <= max_width:
+            cur.append(w)
+        else:
+            lines.append(" ".join(cur))
+            cur = [w]
+    if cur:
+        lines.append(" ".join(cur))
+
+    # Rebalanceo: evita "una palabra por fila" al final
+    if len(lines) >= 2 and len(lines[-1].split()) == 1 and len(lines[-2].split()) > 1:
+        prev = lines[-2].split()
+        moved = prev.pop()
+        cand_prev = " ".join(prev)
+        cand_last = moved + " " + lines[-1]
+        if cand_prev and draw.textlength(cand_last, font=font) <= max_width:
+            lines[-2] = cand_prev
+            lines[-1] = cand_last
+
+    return lines[:max_lines]
+
 def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_spacing_offset=0, force_justify=False):
     prefix = "CONDICIONES GENERALES: "
     if text.startswith("CONDICIONES GENERALES"):
@@ -74,43 +119,6 @@ def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_sp
                 x_cursor += draw.textlength(word, font=current_font) + dynamic_space
         y_start += line_height
 
-# --- AUTO-AJUSTE DE NOMBRES LARGOS ---
-def envolver_por_ancho(draw, texto, fuente, ancho_max):
-    """Envuelve el texto por ANCHO REAL en px (no por número de caracteres)."""
-    palabras = str(texto).split()
-    lineas, actual = [], ""
-    for w in palabras:
-        prueba = (actual + " " + w).strip()
-        if not actual or draw.textlength(prueba, font=fuente) <= ancho_max:
-            actual = prueba
-        else:
-            lineas.append(actual); actual = w
-    if actual: lineas.append(actual)
-    return lineas
-
-def ajustar_nombre(draw, texto, ruta_fuente, size_max, size_min, ancho_max, max_lineas):
-    """Devuelve (lineas, fuente, alto_linea). Reduce la fuente hasta que entre en
-    max_lineas. NUNCA corta el texto: si llega al size_min muestra todo igual."""
-    size = size_max
-    fuente = ImageFont.truetype(ruta_fuente, size)
-    lineas = envolver_por_ancho(draw, texto, fuente, ancho_max)
-    while len(lineas) > max_lineas and size > size_min:
-        size -= 1
-        fuente = ImageFont.truetype(ruta_fuente, size)
-        lineas = envolver_por_ancho(draw, texto, fuente, ancho_max)
-    alto_linea = int(size * 1.25)  # interlineado compacto
-    return lineas, fuente, alto_linea
-
-def fuente_que_entra(draw, texto, ruta_fuente, size_max, size_min, ancho_max):
-    """Devuelve la fuente más grande (entre size_min y size_max) con la que 'texto'
-    entra en ancho_max en UNA sola línea. Sirve para SKU largos que se salen."""
-    size = size_max
-    f = ImageFont.truetype(ruta_fuente, size)
-    while draw.textlength(str(texto), font=f) > ancho_max and size > size_min:
-        size -= 1
-        f = ImageFont.truetype(ruta_fuente, size)
-    return f
-
 def draw_dotted_line(draw, start, end, fill, width=2, gap=8):
     curr_x, curr_y = start
     dest_x, dest_y = end
@@ -122,6 +130,13 @@ def draw_dotted_line(draw, start, end, fill, width=2, gap=8):
         s = (curr_x + sx * i, curr_y + sy * i)
         e = (curr_x + sx * (i + gap), curr_y + sy * (i + gap))
         draw.line([s, e], fill=fill, width=width)
+
+def preciador_width(draw, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2, padding_h=20):
+    """Devuelve el ancho total (con padding) que ocupara el preciador naranja."""
+    num_w = sum(draw.textlength(char, font=f_pv) + tracking for char in text_price) - tracking
+    sym_w = draw.textlength(text_s, font=f_ps)
+    gap = 8 * scale
+    return sym_w + gap + num_w + (padding_h * scale * 2)
 
 def draw_efe_preciador(draw, x_center, y_center, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2, padding_h=20):
     num_w = sum(draw.textlength(char, font=f_pv) + tracking for char in text_price) - tracking 
@@ -157,13 +172,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     tienda = str(row.get('Tienda', 'LC')).strip().upper()
     tipo = str(row['Tipo de diseño']).strip().upper()
     formato = str(row['Formato']).upper().strip()
+    hay_precio = tiene_precio(row.get('Precio desc'))
     try:
         precio_val = "{:,}".format(int(float(row['Precio desc'])))
     except:
         precio_val = str(row['Precio desc'])
     path_fonts, path_fondos = f"TIPOGRAFIA/{tienda}", f"FONDOS/{tienda}/{tipo}"
-    ruta_nombre = f"{path_fonts}/Poppins-Medium.ttf"     # fuente base para auto-ajuste de nombres
-    ruta_sku = f"{path_fonts}/Poppins-Regular.ttf"       # fuente base para auto-ajuste de SKU
     f_names = [f"{tienda} - {tipo} - {formato}", f"{tienda} - REPOWER {tipo} - {formato}"]
     full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in f_names for e in [".jpg", ".png", ".JPG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
     if not full_p: return None
@@ -184,19 +198,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
     if formato == "FLYER":
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
+        rect_x, rect_y = (163 if "IRRESISTIBLE" in tipo else 190), 244
         f_f_semibold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 23)
         w_f, h_f = draw.textlength(f_txt, font=f_f_semibold), 40
-        if "EFERTON" in tipo:
-            # AJUSTE: Fecha a la derecha SIN contenedor naranja, con margen para que no quede al extremo
-            margen_der = 65
-            x_fecha_der = 1080 - margen_der - w_f
-            y_fecha_centro = 244 + h_f // 2
-            # AJUSTE: Color de la fecha en BLANCO (antes naranja)
-            draw.text((x_fecha_der, y_fecha_centro), f_txt, font=f_f_semibold, fill=(255,255,255), anchor="lm")
-        else:
-            rect_x, rect_y = 163, 244
-            draw.rounded_rectangle([rect_x, rect_y, rect_x + w_f + 40, rect_y + h_f], radius=10, fill="#FFA002")
-            draw.text((rect_x + (w_f + 40)//2, rect_y + h_f//2), f_txt, font=f_f_semibold, fill=(255,255,255), anchor="mm")
+        draw.rounded_rectangle([rect_x, rect_y, rect_x + w_f + 40, rect_y + h_f], radius=10, fill="#FFA002")
+        draw.text((rect_x + (w_f + 40)//2, rect_y + h_f//2), f_txt, font=f_f_semibold, fill=(255,255,255), anchor="mm")
         num_prod = len(data_input)
         y_limit_top, y_limit_bottom = 350, 1757
         available_h = y_limit_bottom - y_limit_top
@@ -207,152 +213,185 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         total_content_h = (rows * box_h) + ((rows - 1) * 12)
         y_centering_offset = (available_h - total_content_h) // 2
         current_y_top = y_limit_top + y_centering_offset
-
-        # AJUSTE: cuando el flyer tiene exactamente 4 productos (2 filas reales dentro de un
-        # bloque calculado para 3 filas) queda mucho vacío abajo. Bajamos el bloque ~180px
-        # extra para que se vea más centrado respecto al espacio realmente ocupado.
-        # Los legales (1835) no se tocan; con 2 filas de box_h=430 el bloque baja hasta
-        # current_y_top + 872, dejando margen de sobra antes de los legales.
-        if num_prod == 4:
-            current_y_top += 230
-
         for i, (idx, p) in enumerate(data_input.iterrows()):
             if i >= 8: break
+            p_hay_precio = tiene_precio(p.get('Precio desc'))
             xp, yp = 65 + (i % 2) * 495, current_y_top + (i // 2) * (box_h + 12)
             try:
                 url_foto = p.get('Foto del producto calado') or p.get('Foto')
                 if url_foto:
                     pi_fly = Image.open(BytesIO(requests.get(url_foto, timeout=10).content)).convert("RGBA")
                     pi_fly.thumbnail((img_size_w, img_size_h))
-                    img.paste(pi_fly, (int(xp + 240 - pi_fly.width // 2), int(yp + 20)), pi_fly)
+                    # AJUSTE: se sube la imagen 10px (antes yp + 20)
+                    img.paste(pi_fly, (int(xp + 240 - pi_fly.width // 2), int(yp + 10)), pi_fly)
             except: pass
-            cx_col1, cx_col2 = xp + 125, xp + 345
             f_m_flyer = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 28)
-            draw.text((cx_col1, yp + box_h - 115), p['Marca'], font=f_m_flyer, fill=(0,0,0), anchor="mm")
-            y_n = yp + box_h - 85
-            # AJUSTE: nombre auto-ajustable (máx 3 líneas, reduce fuente si es muy largo). Centrado.
-            lineas_n, f_nom, alto_n = ajustar_nombre(draw, p['Nombre del producto'], ruta_nombre, size_max=20, size_min=13, ancho_max=215, max_lineas=3)
-            for line in lineas_n:
-                draw.text((cx_col1, y_n), line, font=f_nom, fill=(0,0,0), anchor="mm"); y_n += alto_n
-            f_pv_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 53)
-            f_ps_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 30)
-            # AJUSTE: SKU auto-ajustable para que un SKU largo no quede pegado al nombre
-            f_sku_fly = fuente_que_entra(draw, p['SKU'], ruta_sku, size_max=15, size_min=10, ancho_max=180)
-            try: p_fmt = "{:,}".format(int(float(p['Precio desc'])))
-            except: p_fmt = str(p['Precio desc'])
-            if "EFERTON" in tipo:
-                # AJUSTE: Sin preciador naranja. Precio y S/ en color naranja (igual que IRRESISTIBLE)
-                y_p_efe = yp + box_h - 88
-                w_total_p = draw.textlength("S/", font=f_ps_fly) + 5 + draw.textlength(p_fmt, font=f_pv_fly)
-                x_i = cx_col2 - (w_total_p // 2)
-                draw.text((x_i, y_p_efe), "S/", font=f_ps_fly, fill="#FFA002", anchor="ls")
-                draw.text((x_i + draw.textlength("S/", font=f_ps_fly) + 5, y_p_efe), p_fmt, font=f_pv_fly, fill="#FFA002", anchor="ls")
-                draw.text((cx_col2 + 8, y_p_efe + 25), str(p['SKU']), font=f_sku_fly, fill=(0,0,0), anchor="mm")
+
+            c_txt = (255, 255, 255) if "ANIVERSARIO" in tipo else (0, 0, 0)
+
+            if p_hay_precio:
+                # --- 2 columnas: marca/nombre | preciador/SKU ---
+                cx_col1, cx_col2 = xp + 125, xp + 345
+                draw.text((cx_col1, yp + box_h - 115), p['Marca'], font=f_m_flyer, fill=c_txt, anchor="mm")
+                y_n = yp + box_h - 85
+                for line in textwrap.wrap(str(p['Nombre del producto']), width=18)[:4]: 
+                    draw.text((cx_col1, y_n), line, font=f_p, fill=c_txt, anchor="mm"); y_n += 22
+
+                f_pv_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 53)
+                f_ps_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 30)
+                try: p_fmt = "{:,}".format(int(float(p['Precio desc'])))
+                except: p_fmt = str(p['Precio desc'])
+
+                if "EFERTON" in tipo or "ANIVERSARIO" in tipo:
+                    y_p_efe = yp + box_h - 105
+                    draw_efe_preciador(draw, cx_col2, y_p_efe, "S/", p_fmt, f_ps_fly, f_pv_fly, scale=preciador_scale + 0.4, padding_h=10)
+                    draw.text((cx_col2 + 8, y_p_efe + 50), str(p['SKU']), font=f_s_ind, fill=c_txt, anchor="mm")
+                else:
+                    y_p_irr = yp + box_h - 88
+                    w_total_p = draw.textlength("S/", font=f_ps_fly) + 5 + draw.textlength(p_fmt, font=f_pv_fly)
+                    x_i = cx_col2 - (w_total_p // 2)
+                    draw.text((x_i, y_p_irr), "S/", font=f_ps_fly, fill="#FFA002", anchor="ls")
+                    draw.text((x_i + draw.textlength("S/", font=f_ps_fly) + 5, y_p_irr), p_fmt, font=f_pv_fly, fill="#FFA002", anchor="ls")
+                    draw.text((cx_col2 + 8, y_p_irr + 25), str(p['SKU']), font=f_s_ind, fill=c_txt, anchor="mm")
             else:
-                y_p_irr = yp + box_h - 88
-                w_total_p = draw.textlength("S/", font=f_ps_fly) + 5 + draw.textlength(p_fmt, font=f_pv_fly)
-                x_i = cx_col2 - (w_total_p // 2)
-                draw.text((x_i, y_p_irr), "S/", font=f_ps_fly, fill="#FFA002", anchor="ls")
-                draw.text((x_i + draw.textlength("S/", font=f_ps_fly) + 5, y_p_irr), p_fmt, font=f_pv_fly, fill="#FFA002", anchor="ls")
-                draw.text((cx_col2 + 8, y_p_irr + 25), str(p['SKU']), font=f_sku_fly, fill=(0,0,0), anchor="mm")
+                # --- Sin precio: 1 sola columna centrada, SKU debajo del nombre ---
+                cx_uni = xp + 240
+                draw.text((cx_uni, yp + box_h - 115), p['Marca'], font=f_m_flyer, fill=c_txt, anchor="mm")
+                y_n = yp + box_h - 85
+                for line in textwrap.wrap(str(p['Nombre del producto']), width=26)[:3]:
+                    draw.text((cx_uni, y_n), line, font=f_p, fill=c_txt, anchor="mm"); y_n += 22
+                draw.text((cx_uni, y_n + FLYER_GAP_SKU), str(p['SKU']), font=f_s_ind, fill=c_txt, anchor="mm")
+
             line_c = "#00ACDE" if "EFERTON" in tipo else "#0A74DA"
             if i % 2 == 0 and (i + 1) < num_prod: draw_dotted_line(draw, (xp + 475, yp + 20), (xp + 475, yp + box_h - 20), line_c)
             if i < (num_prod - 2): draw_dotted_line(draw, (xp + 20, yp + box_h + 6), (xp + 450, yp + box_h + 6), line_c)
         l_m = 70 if "EFERTON" in tipo else 62
-        draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1835, l_m, 1080 - l_m, (255,255,255), line_spacing_offset=1, force_justify=True)
+        # AJUSTE: legales del flyer suben 10px (antes 1835)
+        draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1825, l_m, 1080 - l_m, (255,255,255), line_spacing_offset=1, force_justify=True)
     else:
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado'], timeout=10).content)).convert("RGBA")
-        if formato == "PPL":
-            if "EFERTON" in tipo:
-                # AJUSTE: Replica del diseño de IRRESISTIBLE pero SOLO con preciador (sin precio en texto)
-                # AJUSTE EFERTON: imagen bajada 40px (287 -> 327). El resto queda igual.
-                pi.thumbnail((682, 682)); img.paste(pi, (310, 327), pi)
-                draw.text((91, 639), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
-                ny = 675
-                # AJUSTE: nombre auto-ajustable (máx 4 líneas, reduce fuente si es muy largo)
-                lineas_n, f_nom, alto_n = ajustar_nombre(draw, row['Nombre del producto'], ruta_nombre, size_max=26, size_min=17, ancho_max=200, max_lineas=4)
-                for lp in lineas_n: draw.text((91, ny), lp, font=f_nom, fill=(255,255,255), anchor="ls"); ny += alto_n
-                y_s = ny + 10
-                # AJUSTE: SKU auto-ajustable para que no se sobreponga con la imagen de la derecha
-                f_sku = fuente_que_entra(draw, row['SKU'], ruta_sku, size_max=20, size_min=12, ancho_max=200)
-                draw.text((91, y_s), str(row['SKU']), font=f_sku, fill=(255,255,255), anchor="ls")
-                # AJUSTE: Solo el preciador, subido a la posición donde estaba el precio. Número más pequeño para que no choque con el borde
-                py = max(830, y_s + 80)
-                draw_efe_preciador(draw, 91 + 120, py, "S/", precio_val, f_ps, ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 60), scale=1.0, tracking=-3)
-                draw_justified_text(draw, str(row['Legales']), f_l, 998, 73, 1007, (255,255,255), force_justify=True)
-            else: 
-                pi.thumbnail((682, 682)); img.paste(pi, (310, 287), pi)
-                draw.text((91, 639), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
-                ny = 675
-                # AJUSTE: nombre auto-ajustable (máx 4 líneas, reduce fuente si es muy largo)
-                lineas_n, f_nom, alto_n = ajustar_nombre(draw, row['Nombre del producto'], ruta_nombre, size_max=26, size_min=17, ancho_max=200, max_lineas=4)
-                for lp in lineas_n: draw.text((91, ny), lp, font=f_nom, fill=(255,255,255), anchor="ls"); ny += alto_n
-                y_s = ny + 10
-                # AJUSTE: SKU auto-ajustable para que no se sobreponga con la imagen de la derecha
-                f_sku = fuente_que_entra(draw, row['SKU'], ruta_sku, size_max=20, size_min=12, ancho_max=200)
-                draw.text((91, y_s), str(row['SKU']), font=f_sku, fill=(255,255,255), anchor="ls")
-                py = max(830, y_s + 80); draw.text((91, py), "S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 44), fill=(255,255,255), anchor="ls")
-                draw.text((91 + draw.textlength("S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 44)) + 10, py), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 80), fill=(255,255,255), anchor="ls")
-                draw_justified_text(draw, str(row['Legales']), f_l, 998, 73, 1007, (255,255,255), force_justify=True)
-        elif formato == "STORY":
-            if "EFERTON" in tipo:
-                pi.thumbnail((956, 956)); img.paste(pi, (72, 606), pi)
-                ay = 1600
-                # AJUSTE: Marca, nombre y SKU movidos a la izquierda (X de 160 -> 120) para ganar ancho antes del precio
-                x_textos_efe = 120
-                draw.text((x_textos_efe, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
-                ny = ay + 55
-                # AJUSTE: ancho de quiebre reducido (440 -> 375) para que el nombre NO invada el preciador de la derecha y se vea completo
-                lineas_n, f_nom, alto_n = ajustar_nombre(draw, row['Nombre del producto'], ruta_nombre, size_max=30, size_min=20, ancho_max=375, max_lineas=3)
-                for lp in lineas_n: draw.text((x_textos_efe, ny), lp, font=f_nom, fill=(255,255,255), anchor="ls"); ny += alto_n
-                y_s = ny + 5
-                f_sku = fuente_que_entra(draw, row['SKU'], ruta_sku, size_max=18, size_min=12, ancho_max=375)
-                draw.text((x_textos_efe, y_s), str(row['SKU']), font=f_sku, fill=(255,255,255), anchor="ls")
-                draw_efe_preciador(draw, 780, 1650, "S/", precio_val, ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64), ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110), scale=1.1, padding_h=30)
+        es_aniv = "ANIVERSARIO" in tipo
+        if "EFERTON" in tipo or es_aniv:
+            if formato == "PPL":
+                pi.thumbnail((647, 670))
+                px_img = 277 if es_aniv else 156
+                img.paste(pi, (px_img, 243), pi)
+
+                f_marca_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
+                mx = 990 if es_aniv else 90
+                m_anchor = "rs" if es_aniv else "ls"
+                draw.text((mx, 930), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor=m_anchor)
+
+                f_nom_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25)
+                if hay_precio:
+                    CX_NOMBRE = 580 if es_aniv else 500
+                    PREC_CX = 240 if es_aniv else 840
+                    MARGEN_PREC = 45
+                    prec_w = preciador_width(draw, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
+
+                    if es_aniv:
+                        prec_right = PREC_CX + (prec_w / 2)
+                        max_w_nombre = max(180, int((CX_NOMBRE - prec_right - MARGEN_PREC) * 2))
+                    else:
+                        prec_left = PREC_CX - (prec_w / 2)
+                        max_w_nombre = max(180, int((prec_left - MARGEN_PREC - CX_NOMBRE) * 2))
+                else:
+                    if es_aniv:
+                        zona_ini = 90
+                        zona_fin = 990 - draw.textlength(str(row['Marca']), font=f_marca_ppl) - PPL_MARGEN_MARCA
+                    else:
+                        zona_ini = 90 + draw.textlength(str(row['Marca']), font=f_marca_ppl) + PPL_MARGEN_MARCA
+                        zona_fin = PPL_X_FIN_ZONA
+
+                    CX_NOMBRE = int((zona_ini + zona_fin) // 2)
+                    max_w_nombre = max(180, int(zona_fin - zona_ini))
+
+                lines = wrap_text_pixel(draw, row['Nombre del producto'], f_nom_ppl, max_w_nombre, max_lines=3)
+                if len(lines) >= 3:   ny = 880
+                elif len(lines) == 2: ny = 890
+                else:                 ny = 900
+                for line in lines:
+                    draw.text((CX_NOMBRE, ny), line, font=f_nom_ppl, fill=(255,255,255), anchor="mm"); ny += 28
+                draw.text((CX_NOMBRE, ny + 5), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22), fill=(255,255,255), anchor="mm")
+
+                if hay_precio:
+                    draw_efe_preciador(draw, PREC_CX, 910, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
+                draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 990, (255,255,255), force_justify=True)
+
+            elif formato == "STORY":
+                pi.thumbnail((956, 956)); img.paste(pi, (72, 606), pi); ay = 1600
+
+                if es_aniv:
+                    x_txt = 871 if hay_precio else STORY_X_SIN_PRECIO
+                    anchor_txt = "rs" if hay_precio else "ms"
+                    prec_x = 300
+                else:
+                    x_txt = 209 if hay_precio else STORY_X_SIN_PRECIO
+                    anchor_txt = "ls" if hay_precio else "ms"
+                    prec_x = 780
+
+                draw.text((x_txt, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor=anchor_txt)
+                GAP_MARCA_NOMBRE = 48; LH_NOMBRE = 36; GAP_NOMBRE_SKU = 32; ny = ay + GAP_MARCA_NOMBRE
+                lineas_nom = textwrap.wrap(str(row['Nombre del producto']), width=20 if hay_precio else 32)[:4]
+                last_baseline = ny
+                for lp in lineas_nom:
+                    draw.text((x_txt, ny), lp, font=f_p, fill=(255,255,255), anchor=anchor_txt)
+                    last_baseline = ny; ny += LH_NOMBRE
+                y_s = last_baseline + GAP_NOMBRE_SKU
+                draw.text((x_txt, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor=anchor_txt)
+                if hay_precio:
+                    draw_efe_preciador(draw, prec_x, 1650, "S/", precio_val, ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64), ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110), scale=1.1, padding_h=30)
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
-            else:
-                pi.thumbnail((935, 935)); img.paste(pi, (78, 580), pi); lx = 147
-                draw.text((lx, 1563), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 46), fill=(255,255,255), anchor="ls")
-                ny = 1615
-                # AJUSTE: nombre auto-ajustable (máx 3 líneas, reduce fuente si es muy largo)
-                lineas_n, f_nom, alto_n = ajustar_nombre(draw, row['Nombre del producto'], ruta_nombre, size_max=38, size_min=25, ancho_max=390, max_lineas=3)
-                for lp in lineas_n: draw.text((lx, ny), lp, font=f_nom, fill=(255,255,255), anchor="ls"); ny += alto_n
-                y_s = ny + 10
-                f_sku = fuente_que_entra(draw, row['SKU'], ruta_sku, size_max=29, size_min=18, ancho_max=390)
-                draw.text((lx, y_s), str(row['SKU']), font=f_sku, fill=(255,255,255), anchor="ls")
-                py_irr = 1658; draw.text((566, py_irr), "S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 71), fill=(255,255,255), anchor="ls")
-                draw.text((566 + draw.textlength("S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 71)) + 15, py_irr), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 128), fill=(255,255,255), anchor="ls")
-                draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
-        elif formato == "DISPLAY":
-            if "EFERTON" in tipo:
-                # AJUSTE EFERTON: imagen 10px más pequeña por lado (510 -> 500),
-                # bajada 10px (10 -> 20) y movida 10px a la izquierda (430 -> 420).
-                # El borde inferior de la imagen queda igual que antes (20+500 = 10+510 = 520),
-                # así que no se acerca más a los legales (y=485, que corren en la columna izquierda).
-                pi.thumbnail((500, 500)); img.paste(pi, (420, 20), pi); cx = 260
+
+            elif formato == "DISPLAY":
+                px_img = 180 if es_aniv else 440
+                cx = 820 if es_aniv else 260
+
+                pi.thumbnail((460, 460)); img.paste(pi, (px_img, 25), pi)
                 draw.text((cx, 250), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")
                 ny = 290
-                # AJUSTE: nombre auto-ajustable (máx 3 líneas en vez de 2, reduce fuente si es muy largo). Centrado.
-                lineas_n, f_nom, alto_n = ajustar_nombre(draw, row['Nombre del producto'], ruta_nombre, size_max=20, size_min=13, ancho_max=320, max_lineas=3)
-                for line in lineas_n: draw.text((cx, ny), line, font=f_nom, fill=(255,255,255), anchor="mm"); ny += alto_n
-                y_s = ny + 5
-                f_sku = fuente_que_entra(draw, row['SKU'], ruta_sku, size_max=f_s_ind.size, size_min=11, ancho_max=320)
-                draw.text((cx, y_s), str(row['SKU']), font=f_sku, fill=(255,255,255), anchor="mm")
-                draw_efe_preciador(draw, cx, max(380, y_s + 60), "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
-                draw_justified_text(draw, str(row['Legales']), f_l, 485, 40, 960, (255,255,255), force_justify=True)
-            else:
+                for line in textwrap.wrap(str(row['Nombre del producto']), width=20)[:2]:
+                    draw.text((cx, ny), line, font=f_p, fill=(255,255,255), anchor="mm"); ny += 25
+                y_s = ny + 5; draw.text((cx, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="mm")
+
+                if hay_precio:
+                    draw_efe_preciador(draw, cx, max(380, y_s + 60), "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
+                draw_justified_text(draw, str(row['Legales']), f_l, 485 if hay_precio else 480, 40, 960, (255,255,255), force_justify=True)
+        else:
+            if formato == "PPL":
+                pi.thumbnail((682, 682)); img.paste(pi, (310, 287), pi)
+                draw.text((91, 639), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
+                lines = textwrap.wrap(row['Nombre del producto'], width=13); ny = 675
+                for lp in lines[:4]: draw.text((91, ny), lp, font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26), fill=(255,255,255), anchor="ls"); ny += 30
+                y_s = ny + 10; draw.text((91, y_s), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 20), fill=(255,255,255), anchor="ls")
+                if hay_precio:
+                    py = max(830, y_s + 80); draw.text((91, py), "S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 44), fill=(255,255,255), anchor="ls")
+                    draw.text((91 + draw.textlength("S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 44)) + 10, py), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 80), fill=(255,255,255), anchor="ls")
+                draw_justified_text(draw, str(row['Legales']), f_l, 998, 73, 1007, (255,255,255), force_justify=True)
+            elif formato == "STORY":
+                pi.thumbnail((935, 935)); img.paste(pi, (78, 580), pi)
+                # Sin precio: 1 sola columna, el bloque se centra
+                lx = 147 if hay_precio else STORY_X_SIN_PRECIO
+                anchor_txt = "ls" if hay_precio else "ms"
+                draw.text((lx, 1563), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 46), fill=(255,255,255), anchor=anchor_txt)
+                ny = 1615
+                for lp in textwrap.wrap(row['Nombre del producto'], width=18 if hay_precio else 28)[:4]: draw.text((lx, ny), lp, font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 38), fill=(255,255,255), anchor=anchor_txt); ny += 42
+                y_s = ny + 10; draw.text((lx, y_s), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 29), fill=(255,255,255), anchor=anchor_txt)
+                if hay_precio:
+                    py_irr = 1658; draw.text((566, py_irr), "S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 71), fill=(255,255,255), anchor="ls")
+                    draw.text((566 + draw.textlength("S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 71)) + 15, py_irr), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 128), fill=(255,255,255), anchor="ls")
+                draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
+            elif formato == "DISPLAY":
                 pi.thumbnail((485, 465)); img.paste(pi, (412, 24), pi); lx = 91
                 draw.text((lx, 219), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
                 ny = 255
-                # AJUSTE: nombre auto-ajustable (máx 3 líneas, reduce fuente si es muy largo)
-                lineas_n, f_nom, alto_n = ajustar_nombre(draw, row['Nombre del producto'], ruta_nombre, size_max=20, size_min=13, ancho_max=310, max_lineas=3)
-                for lp in lineas_n: draw.text((lx, ny), lp, font=f_nom, fill=(255,255,255), anchor="ls"); ny += alto_n
-                y_s = ny + 5
-                f_sku = fuente_que_entra(draw, row['SKU'], ruta_sku, size_max=f_s_ind.size, size_min=11, ancho_max=310)
-                draw.text((lx, y_s), str(row['SKU']), font=f_sku, fill=(255,255,255), anchor="ls")
-                y_p = max(379, y_s + 70); draw.text((lx, y_p), "s/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 42), fill=(255,255,255), anchor="ls")
-                draw.text((lx + draw.textlength("s/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 42)) + 10, y_p), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 76), fill=(255,255,255), anchor="ls")
-                draw_justified_text(draw, str(row['Legales']), f_l, 490, 40, 960, (255,255,255), force_justify=True)
+                for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((lx, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 25
+                y_s = ny + 5; draw.text((lx, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor="ls")
+                if hay_precio:
+                    y_p = max(379, y_s + 70); draw.text((lx, y_p), "s/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 42), fill=(255,255,255), anchor="ls")
+                    draw.text((lx + draw.textlength("s/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 42)) + 10, y_p), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 76), fill=(255,255,255), anchor="ls")
+                # Sin precio: los legales suben 5px
+                draw_justified_text(draw, str(row['Legales']), f_l, 490 if hay_precio else 485, 40, 960, (255,255,255), force_justify=True)
 
     # --- GUARDADO FINAL (SKU LIMPIO) ---
     sku_limpio = str(row['SKU'] or row['ID_Flyer']).replace("/", "-").replace("\\", "-")
