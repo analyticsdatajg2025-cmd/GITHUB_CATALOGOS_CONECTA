@@ -400,6 +400,11 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
 # --- INICIO DE EJECUCIÓN (OPTIMIZADO PARA EVITAR ERROR 429) ---
 data, res_sheet, viejos = get_sheets_data()
+
+# FIX: cada script solo debe procesar sus propias filas, nunca las de la otra marca
+data = data[data['Tienda'].astype(str).str.strip().str.upper() == 'EFE'].reset_index(drop=True)
+print(f"DEBUG: Filas EFE detectadas: {len(data)}")
+
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 filas_para_google = []
