@@ -83,6 +83,18 @@ def get_sheets_data():
     sheet = client.open_by_key("1PmvCyC3d0VvvZSdvWM73NYusrYevVYtRzVs2gbxjw1M")
     data = pd.DataFrame(sheet.worksheet("Hoja 1").get_all_records())
     data.columns = [c.strip() for c in data.columns]
+
+    # FIX: normaliza el nombre de la columna de marca (Tienda o RETAIL), sin importar mayúsculas
+    col_map = {c.lower(): c for c in data.columns}
+    col_tienda_real = next((col_map[c] for c in ['tienda', 'retail'] if c in col_map), None)
+    if col_tienda_real is None:
+        raise KeyError(
+            "No se encontró una columna de marca ('Tienda' o 'RETAIL') en 'Hoja 1'. "
+            f"Columnas detectadas: {list(data.columns)}"
+        )
+    if col_tienda_real != 'Tienda':
+        data = data.rename(columns={col_tienda_real: 'Tienda'})
+
     res_sheet = sheet.worksheet("Resultados")
     v_act = res_sheet.get_all_values()
     viejos = {r[1].strip().upper() for r in v_act[1:] if len(r) > 1}
@@ -124,7 +136,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     if formato == "FLYER":
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
         wf = draw.textlength(f_txt, font=f_f)
-        x_fecha = 64 
+        x_fecha = 1080 - 64 - (wf + 35)  # AJUSTE: fecha pasada a la derecha (antes fija en 64, lado izquierdo)
         # AJUSTE: Color Blanco para fecha y contorno en el Flyer
         color_blanco = (255, 255, 255)
         draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=color_blanco, width=3)
@@ -179,7 +191,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         # Otros formatos mantienen txt_c (Amarillo/Blanco según versión)
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         if formato == "DISPLAY":
-            pi.thumbnail((483, 483)); img.paste(pi, (423, 25), pi); cx, ny = 255, 245 
+            pi.thumbnail((483, 483), Image.Resampling.LANCZOS); img.paste(pi, (423, 25), pi); cx, ny = 255, 245 
             draw.text((cx, 195), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 27 
@@ -194,12 +206,12 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw.text((40, 480), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=480, x_start=40, x_end=960, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "STORY":
-            pi = pi.resize((845, 845), Image.Resampling.LANCZOS); img.paste(pi, (140, 630), pi); cx_textos, anchor_y_textos = 150, 1482 
+            pi = pi.resize((845, 845), Image.Resampling.LANCZOS); img.paste(pi, (140, 690), pi); cx_textos, anchor_y_textos = 150, 1542  # AJUSTE: baja imagen y descripción (antes 630 / 1482)
             draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt"); ny = anchor_y_textos + 65 
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22 if hay_precio else 34)[:2]
             for l in lineas_nombre: draw.text((cx_textos, ny), l, font=f_p, fill=txt_c, anchor="lt"); ny += 40 
             if hay_precio:
-                anchor_y_precio, p_v, espacio_entre_simbolo = 1540, precio_val, 20
+                anchor_y_precio, p_v, espacio_entre_simbolo = 1600, precio_val, 20  # AJUSTE: baja (antes 1540)
                 tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo; px_bloque_completo = 810 - tw//2
                 draw.text((px_bloque_completo, anchor_y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_bloque_completo + draw.textlength("S/", font=f_ps) + espacio_entre_simbolo; draw.text((px_numero, anchor_y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
                 draw.text((810, anchor_y_precio + 40), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt") 
@@ -225,16 +237,33 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
     sku_limpio = str(row['SKU'] or row['ID_Flyer']).replace("/", "-").replace("\\", "-")
     fname = f"{sku_limpio}_{formato}_{color_version}.jpg"
-    img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
+    img.save(f"output/{fname}", quality=100, subsampling=0); return f"{RAW_URL}{fname}"
+
+def resolver_columna(df, nombre_buscado):
+    """Devuelve el nombre REAL de la columna en df que coincide con nombre_buscado
+    ignorando mayúsculas/minúsculas y espacios extra. None si no existe ninguna."""
+    objetivo = nombre_buscado.strip().lower()
+    for c in df.columns:
+        if c.strip().lower() == objetivo:
+            return c
+    return None
 
 # --- BUCLE DE EJECUCIÓN PRINCIPAL ---
 data, res_sheet, viejos = get_sheets_data()
+
+# FIX: cada script solo debe procesar sus propias filas, nunca las de la otra marca
+col_tienda = resolver_columna(data, 'Tienda')
+if col_tienda is None:
+    print(f"❌ No se encontró una columna 'Tienda' en Hoja 1. Columnas disponibles: {list(data.columns)}")
+    raise SystemExit(1)
+data = data[data[col_tienda].astype(str).str.strip().str.upper() == 'LC'].reset_index(drop=True)
+
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 archivos_generados = 0 
 filas_para_google = [] 
 
-print(f"DEBUG: Filas detectadas en el Excel: {len(data)}")
+print(f"DEBUG: Filas LC detectadas (columna real: '{col_tienda}'): {len(data)}")
 
 for idx, row in data.iterrows():
     f_v = str(row['Formato']).upper().strip()
