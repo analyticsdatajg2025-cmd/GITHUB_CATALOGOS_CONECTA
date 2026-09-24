@@ -357,13 +357,17 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     max_w_nombre = max(180, int(zona_fin - zona_ini))
 
                 lines = wrap_text_pixel(draw, row['Nombre del producto'], f_nom_ppl, max_w_nombre, max_lines=3)
-                if len(lines) >= 3:   ny = 820  # AJUSTE: sube más (antes 860; original 880)
-                elif len(lines) == 2: ny = 830  # AJUSTE: sube más (antes 870; original 890)
-                else:                 ny = 840  # AJUSTE: sube más (antes 880; original 900)
+                # AJUSTE: nombre y SKU pasan a ser un bloque pegado, centrado verticalmente
+                # sobre la marca. Antes ny era fijo (820/830/840) y el SKU caia a ny+22, asi que
+                # los dos quedaban muy separados entre si y desalineados respecto de la marca.
+                LH_NOMBRE_PPL = 28
+                GAP_NOMBRE_SKU_PPL = 6
+                CY_MARCA = 859   # centro optico de la marca (baseline 870, cuerpo 30)
+                alto_bloque = (len(lines) * LH_NOMBRE_PPL) + GAP_NOMBRE_SKU_PPL
+                ny = CY_MARCA - alto_bloque // 2
                 for line in lines:
-                    draw.text((CX_NOMBRE, ny), line, font=f_nom_ppl, fill=(255,255,255), anchor="mm"); ny += 28
-                # AJUSTE: el SKU baja, dejaba de leerse pegado al nombre (antes ny + 5)
-                draw.text((CX_NOMBRE, ny + 22), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22), fill=(255,255,255), anchor="mm")
+                    draw.text((CX_NOMBRE, ny), line, font=f_nom_ppl, fill=(255,255,255), anchor="mm"); ny += LH_NOMBRE_PPL
+                draw.text((CX_NOMBRE, ny + GAP_NOMBRE_SKU_PPL), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22), fill=(255,255,255), anchor="mm")
 
                 if hay_precio:
                     draw_efe_preciador(draw, PREC_CX, 850, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)  # AJUSTE: sube más (antes 890; original 910)
@@ -373,7 +377,6 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # AJUSTE: foto centrada en el lienzo real (antes fija en x=72, centro caía en 550)
                 pi.thumbnail((956, 956), Image.Resampling.LANCZOS)
                 img.paste(pi, ((1080 - pi.width) // 2, 526), pi)
-                ay = 1520
 
                 # AJUSTE: preciador un poco más chico para que quepa espejado sin pisar el nombre
                 f_pv_story = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 92)   # antes 110
@@ -389,9 +392,16 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     anchor_txt = "ls" if hay_precio else "ms"
                     prec_x = int((1080 - STORY_MARGEN) - prec_w / 2)   # AJUSTE: espejo (antes 780)
 
-                draw.text((x_txt, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor=anchor_txt)
-                GAP_MARCA_NOMBRE = 48; LH_NOMBRE = 36; GAP_NOMBRE_SKU = 32; ny = ay + GAP_MARCA_NOMBRE
+                GAP_MARCA_NOMBRE = 48; LH_NOMBRE = 36; GAP_NOMBRE_SKU = 32
                 lineas_nom = textwrap.wrap(str(row['Nombre del producto']), width=20 if hay_precio else 32)[:4]
+                # AJUSTE: el bloque marca/nombre/SKU se centra verticalmente contra el preciador.
+                # Antes ay era fijo en 1520 y el texto quedaba flotando muy por encima del precio.
+                CY_PRECIO = 1570
+                n_lin = max(1, len(lineas_nom))
+                ay = CY_PRECIO - 27 - ((n_lin - 1) * (LH_NOMBRE // 2))
+
+                draw.text((x_txt, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor=anchor_txt)
+                ny = ay + GAP_MARCA_NOMBRE
                 last_baseline = ny
                 for lp in lineas_nom:
                     draw.text((x_txt, ny), lp, font=f_p, fill=(255,255,255), anchor=anchor_txt)
@@ -399,7 +409,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 y_s = last_baseline + GAP_NOMBRE_SKU
                 draw.text((x_txt, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor=anchor_txt)
                 if hay_precio:
-                    draw_efe_preciador(draw, prec_x, 1570, "S/", precio_val, f_ps_story, f_pv_story, scale=1.1, padding_h=24)
+                    draw_efe_preciador(draw, prec_x, CY_PRECIO, "S/", precio_val, f_ps_story, f_pv_story, scale=1.1, padding_h=24)
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
 
             elif formato == "DISPLAY":
