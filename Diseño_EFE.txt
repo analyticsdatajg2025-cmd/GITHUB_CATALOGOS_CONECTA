@@ -21,6 +21,29 @@ PPL_X_FIN_ZONA     = 990   # limite derecho util para el nombre en PPL sin preci
 PPL_MARGEN_MARCA   = 45    # aire entre la marca y el bloque de nombre en PPL sin precio
 FLYER_GAP_SKU      = 4     # separacion extra entre nombre y SKU en el flyer sin precio
 
+# --- AJUSTE: medidas obligatorias por formato ---
+# Si el fondo no mide esto, el lienzo real no coincide con las coordenadas del
+# codigo y TODO queda descentrado. Se normaliza antes de pintar y se avisa.
+MEDIDAS_FORMATO = {
+    "PPL":     (1080, 1080),
+    "STORY":   (1080, 1920),
+    "FLYER":   (1080, 1920),
+    "DISPLAY": (1000,  526),
+}
+
+# --- AJUSTE: margenes espejados (texto a un lado / preciador al otro) ---
+STORY_MARGEN = 209   # margen lateral del bloque de texto y del preciador en STORY
+PPL_MARGEN_X = 90    # margen lateral del PPL, alineado con el de los legales
+
+def normalizar_lienzo(img, formato, ruta_fondo):
+    """Fuerza el fondo a la medida oficial del formato. Devuelve la imagen lista."""
+    esperado = MEDIDAS_FORMATO.get(formato)
+    if esperado and img.size != esperado:
+        print(f"⚠️  FONDO FUERA DE MEDIDA: {ruta_fondo} es {img.size}, se esperaba {esperado}. "
+              f"Se normaliza (reexportar el fondo es el arreglo correcto).")
+        img = img.resize(esperado, Image.Resampling.LANCZOS)
+    return img
+
 def tiene_precio(valor):
     """True si la celda 'Precio desc' trae algo valido para pintar."""
     if valor is None:
@@ -193,7 +216,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     f_names = [f"{tienda} - {tipo} - {formato}", f"{tienda} - REPOWER {tipo} - {formato}"]
     full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in f_names for e in [".jpg", ".png", ".JPG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
     if not full_p: return None
-    img = Image.open(full_p).convert("RGB"); draw = ImageDraw.Draw(img)
+    img = Image.open(full_p).convert("RGB")
+    img = normalizar_lienzo(img, formato, full_p)  # AJUSTE: lienzo a medida oficial antes de pintar
+    draw = ImageDraw.Draw(img)
     try:
         p_size = 90; s_size = 35; l_size = 10
         if formato == "DISPLAY": p_size = 60; s_size = 30; l_size = 8
@@ -294,16 +319,17 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 img.paste(pi, (px_img, 183), pi)  # AJUSTE: sube más para centralizar (antes 223; original 243)
 
                 f_marca_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
-                mx = 990 if es_aniv else 250  # AJUSTE: marca más pegada a la derecha (antes 190; original 90)
+                mx = (1080 - PPL_MARGEN_X) if es_aniv else 120  # AJUSTE: marca pegada al margen izquierdo (antes 250)
                 m_anchor = "rs" if es_aniv else "ls"
-                draw.text((mx, 870), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor=m_anchor)  # AJUSTE: sube más (antes 910; original 930)
+                draw.text((mx, 870), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor=m_anchor)
 
                 f_nom_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25)
                 if hay_precio:
-                    CX_NOMBRE = 580 if es_aniv else 500
-                    PREC_CX = 240 if es_aniv else 840
-                    MARGEN_PREC = 45
                     prec_w = preciador_width(draw, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
+                    CX_NOMBRE = 580 if es_aniv else 500
+                    # AJUSTE: el preciador cierra contra el margen opuesto al de la marca
+                    PREC_CX = int(PPL_MARGEN_X + prec_w / 2) if es_aniv else int((1080 - PPL_MARGEN_X) - prec_w / 2)
+                    MARGEN_PREC = 45
 
                     if es_aniv:
                         prec_right = PREC_CX + (prec_w / 2)
@@ -313,10 +339,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                         max_w_nombre = max(180, int((prec_left - MARGEN_PREC - CX_NOMBRE) * 2))
                 else:
                     if es_aniv:
-                        zona_ini = 90
-                        zona_fin = 990 - draw.textlength(str(row['Marca']), font=f_marca_ppl) - PPL_MARGEN_MARCA
+                        zona_ini = PPL_MARGEN_X
+                        zona_fin = mx - draw.textlength(str(row['Marca']), font=f_marca_ppl) - PPL_MARGEN_MARCA
                     else:
-                        zona_ini = 90 + draw.textlength(str(row['Marca']), font=f_marca_ppl) + PPL_MARGEN_MARCA
+                        zona_ini = mx + draw.textlength(str(row['Marca']), font=f_marca_ppl) + PPL_MARGEN_MARCA
                         zona_fin = PPL_X_FIN_ZONA
 
                     CX_NOMBRE = int((zona_ini + zona_fin) // 2)
@@ -328,23 +354,32 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 else:                 ny = 840  # AJUSTE: sube más (antes 880; original 900)
                 for line in lines:
                     draw.text((CX_NOMBRE, ny), line, font=f_nom_ppl, fill=(255,255,255), anchor="mm"); ny += 28
-                draw.text((CX_NOMBRE, ny + 5), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22), fill=(255,255,255), anchor="mm")
+                # AJUSTE: el SKU baja, dejaba de leerse pegado al nombre (antes ny + 5)
+                draw.text((CX_NOMBRE, ny + 22), str(row['SKU']), font=ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 22), fill=(255,255,255), anchor="mm")
 
                 if hay_precio:
                     draw_efe_preciador(draw, PREC_CX, 850, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)  # AJUSTE: sube más (antes 890; original 910)
-                draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 990, (255,255,255), force_justify=True)
+                draw_justified_text(draw, str(row['Legales']), f_l, 998, PPL_MARGEN_X, 1080 - PPL_MARGEN_X, (255,255,255), force_justify=True)
 
             elif formato == "STORY":
-                pi.thumbnail((956, 956), Image.Resampling.LANCZOS); img.paste(pi, (72, 526), pi); ay = 1520  # AJUSTE: sube más (antes 586 / 1580; original 606 / 1600)
+                # AJUSTE: foto centrada en el lienzo real (antes fija en x=72, centro caía en 550)
+                pi.thumbnail((956, 956), Image.Resampling.LANCZOS)
+                img.paste(pi, ((1080 - pi.width) // 2, 526), pi)
+                ay = 1520
+
+                # AJUSTE: preciador un poco más chico para que quepa espejado sin pisar el nombre
+                f_pv_story = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 92)   # antes 110
+                f_ps_story = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 54)   # antes 64
+                prec_w = preciador_width(draw, "S/", precio_val, f_ps_story, f_pv_story, scale=1.1, padding_h=24)
 
                 if es_aniv:
-                    x_txt = 871 if hay_precio else STORY_X_SIN_PRECIO
+                    x_txt = (1080 - STORY_MARGEN) if hay_precio else STORY_X_SIN_PRECIO
                     anchor_txt = "rs" if hay_precio else "ms"
-                    prec_x = 300
+                    prec_x = int(STORY_MARGEN + prec_w / 2)            # AJUSTE: espejo (antes 300)
                 else:
-                    x_txt = 209 if hay_precio else STORY_X_SIN_PRECIO
+                    x_txt = STORY_MARGEN if hay_precio else STORY_X_SIN_PRECIO
                     anchor_txt = "ls" if hay_precio else "ms"
-                    prec_x = 780
+                    prec_x = int((1080 - STORY_MARGEN) - prec_w / 2)   # AJUSTE: espejo (antes 780)
 
                 draw.text((x_txt, ay), row['Marca'], font=f_m, fill=(255,255,255), anchor=anchor_txt)
                 GAP_MARCA_NOMBRE = 48; LH_NOMBRE = 36; GAP_NOMBRE_SKU = 32; ny = ay + GAP_MARCA_NOMBRE
@@ -356,7 +391,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 y_s = last_baseline + GAP_NOMBRE_SKU
                 draw.text((x_txt, y_s), str(row['SKU']), font=f_s_ind, fill=(255,255,255), anchor=anchor_txt)
                 if hay_precio:
-                    draw_efe_preciador(draw, prec_x, 1570, "S/", precio_val, ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64), ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110), scale=1.1, padding_h=30)  # AJUSTE: sube más (antes 1630; original 1650)
+                    draw_efe_preciador(draw, prec_x, 1570, "S/", precio_val, f_ps_story, f_pv_story, scale=1.1, padding_h=24)
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
 
             elif formato == "DISPLAY":
