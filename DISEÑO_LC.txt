@@ -138,8 +138,17 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         precio_val = str(row['Precio desc'])
 
     fname_base = f"LC - {tipo} - {'FLYER' if formato == 'FLYER' else formato}"
-    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in [f"{fname_base} FONDO {color_version}", f"{fname_base} {color_version}", fname_base] for e in [".png", ".jpg", ".PNG", ".JPG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
-    if not full_p: return None
+    # AJUSTE: se agregan .jpeg/.JPEG. Los flyers estaban exportados en .jpeg y no entraban
+    # en la busqueda, asi que generar_diseno devolvia None y el flyer se perdia en silencio.
+    EXTENSIONES = [".png", ".jpg", ".jpeg", ".PNG", ".JPG", ".JPEG"]
+    VARIANTES = [f"{fname_base} FONDO {color_version}", f"{fname_base} {color_version}", fname_base]
+    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in VARIANTES for e in EXTENSIONES if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
+    if not full_p:
+        # AJUSTE: antes era un return None mudo. Ahora dice exactamente que falta.
+        print(f"❌ FONDO NO ENCONTRADO para LC / {tipo} / {formato} / {color_version}. "
+              f"Se buscaron estos nombres en '{path_fondos}': "
+              f"{[n + e for n in VARIANTES for e in EXTENSIONES]}")
+        return None
     img = Image.open(full_p).convert("RGB")
     img = normalizar_lienzo(img, formato, full_p)  # AJUSTE: lienzo a medida oficial antes de pintar
     draw = ImageDraw.Draw(img)
