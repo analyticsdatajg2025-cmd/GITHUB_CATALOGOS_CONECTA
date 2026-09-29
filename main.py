@@ -22,6 +22,11 @@ FEEDS = {
     "EFE": "https://www.efe.com.pe/media/feed/google_prueba_copy_copy.txt",
 }
 TIENDA_FEED = "LC"   # este script es de LC, asi que usa el feed de LC
+
+# --- AJUSTE: marca que se escribe en la columna C de 'Resultados' ---
+# El append es POSICIONAL, asi que el orden debe ser exactamente:
+#   A Fecha | B ID | C Tienda | D Diseño | E Formato | F Color | G Link Imagen | H Link web
+TIENDA_SCRIPT = "LC"
 TEXTO_SIN_FEED = "NO SE ENCUENTRA EN EL FEED"
 
 # Un flyer agrupa varios SKUs y no tiene una sola pagina de producto.
@@ -324,7 +329,9 @@ for idx, row in data.iterrows():
             if url: 
                 # AJUSTE: se agrega al final el link de redireccion del SKU sacado del feed
                 lw = link_web(TIENDA_FEED, row['SKU'])
-                filas_para_google.append([h_lima, llave, row['Tipo de diseño'], f_v, c, url, lw])
+                # AJUSTE: se agrega TIENDA_SCRIPT en la posicion 3 (columna C).
+                # Antes se mandaban 6 valores y todo quedaba corrido una columna a la izquierda.
+                filas_para_google.append([h_lima, llave, TIENDA_SCRIPT, row['Tipo de diseño'], f_v, c, url, lw])
                 archivos_generados += 1
 
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
@@ -340,7 +347,8 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
             if url: 
                 # AJUSTE: link web del flyer = link del primer SKU del grupo (ver FLYER_USA_PRIMER_SKU)
                 lw = link_web(TIENDA_FEED, group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
-                filas_para_google.append([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url, lw])
+                # AJUSTE: mismo fix de columna Tienda que en el ciclo de piezas individuales
+                filas_para_google.append([h_lima, llave, TIENDA_SCRIPT, group.iloc[0]['Tipo de diseño'], "FLYER", c, url, lw])
                 archivos_generados += 1
 
 if filas_para_google:
