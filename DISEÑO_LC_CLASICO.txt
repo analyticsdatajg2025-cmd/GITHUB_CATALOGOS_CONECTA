@@ -14,6 +14,79 @@ USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
+# --- FEEDS DE PRODUCTO (link de redireccion por SKU) ---
+# El SKU del Sheet se busca contra la columna 'id' del feed y se devuelve su 'link'.
+# El feed se descarga UNA sola vez por corrida y queda en cache.
+FEEDS = {
+    "LC":  "https://www.lacuracao.pe/media/feed/google_curacao.txt",
+    "EFE": "https://www.efe.com.pe/media/feed/google_prueba_copy_copy.txt",
+}
+TIENDA_FEED = "LC"   # este script es de LC, asi que usa el feed de LC
+TEXTO_SIN_FEED = "NO SE ENCUENTRA EN EL FEED"
+
+# Un flyer agrupa varios SKUs y no tiene una sola pagina de producto.
+# True  -> usa el link del PRIMER producto del grupo.
+# False -> deja TEXTO_SIN_FEED en los flyers.
+FLYER_USA_PRIMER_SKU = True
+
+_feed_cache = {}
+
+def cargar_feed(tienda):
+    """Descarga el feed de la tienda y devuelve {SKU_MAYUSCULAS: link}. Cachea por corrida."""
+    tienda = str(tienda).strip().upper()
+    if tienda in _feed_cache:
+        return _feed_cache[tienda]
+
+    url = FEEDS.get(tienda)
+    mapa = {}
+    if not url:
+        print(f"⚠️  No hay feed configurado para la tienda '{tienda}'.")
+        _feed_cache[tienda] = mapa
+        return mapa
+
+    try:
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        try:
+            texto = r.content.decode("utf-8")
+        except UnicodeDecodeError:
+            texto = r.content.decode("latin-1")
+
+        lineas = texto.splitlines()
+        if not lineas:
+            raise ValueError("el feed vino vacio")
+
+        cab = [c.strip().lower() for c in lineas[0].split("\t")]
+        i_id, i_link = cab.index("id"), cab.index("link")
+
+        for ln in lineas[1:]:
+            if not ln.strip():
+                continue
+            campos = ln.split("\t")
+            if len(campos) <= max(i_id, i_link):
+                continue  # fila truncada: se ignora
+            sku_feed = campos[i_id].strip().upper()
+            link_feed = campos[i_link].strip()
+            if sku_feed and link_feed:
+                mapa[sku_feed] = link_feed
+
+        print(f"✅ Feed {tienda}: {len(mapa)} SKUs cargados desde {url}")
+    except Exception as e:
+        print(f"⚠️  No se pudo leer el feed de {tienda} ({url}): {e}. "
+              f"Todos los links web quedaran como '{TEXTO_SIN_FEED}'.")
+
+    _feed_cache[tienda] = mapa
+    return mapa
+
+def link_web(tienda, sku):
+    """Devuelve el link de redireccion del SKU, o el texto de fallback si no esta en el feed."""
+    if sku is None:
+        return TEXTO_SIN_FEED
+    clave = str(sku).strip().upper()
+    if not clave or clave in ("NAN", "NONE"):
+        return TEXTO_SIN_FEED
+    return cargar_feed(tienda).get(clave, TEXTO_SIN_FEED)
+
 # --- AJUSTES PARA PIEZAS SIN PRECIO (separación entre nombre y SKU) ---
 GAP_SKU_SIN_PRECIO = {"DISPLAY": 15, "STORY": 12, "PPL": 6, "FLYER": 2}
 
@@ -248,7 +321,9 @@ for idx, row in data.iterrows():
             print(f"🎨 Generando pieza nueva: {llave}")
             url = generar_diseno(row, c)
             if url: 
-                filas_para_google.append([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+                # AJUSTE: se agrega al final el link de redireccion del SKU sacado del feed
+                lw = link_web(TIENDA_FEED, row['SKU'])
+                filas_para_google.append([h_lima, llave, row['Tipo de diseño'], f_v, c, url, lw])
                 archivos_generados += 1
 
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
@@ -261,7 +336,9 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
             print(f"🎨 Generando Flyer nuevo: {llave}")
             url = generar_diseno(group, c)
             if url: 
-                filas_para_google.append([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+                # AJUSTE: link web del flyer = link del primer SKU del grupo (ver FLYER_USA_PRIMER_SKU)
+                lw = link_web(TIENDA_FEED, group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
+                filas_para_google.append([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url, lw])
                 archivos_generados += 1
 
 if filas_para_google:
