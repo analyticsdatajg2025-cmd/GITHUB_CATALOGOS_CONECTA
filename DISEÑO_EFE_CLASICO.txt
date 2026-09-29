@@ -8,12 +8,18 @@ from oauth2client.service_account import ServiceAccountCredentials
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime, timedelta
 from io import BytesIO
-import textwrap 
+import textwrap
 
 # --- CONFIGURACIÓN DE RUTAS ---
 USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
+
+# --- TIENDA DE ESTE SCRIPT ---
+# CAMBIO: este script es SOLO para EFE. La tienda ya no se lee fila por fila
+# (eso era lo que hacia que cayera en 'LC' y buscara FONDOS/LC/...).
+# Se usa esta constante para fondos, tipografias, llave, nombre de archivo y feed.
+TIENDA_SCRIPT = "EFE"
 
 # --- FEEDS DE PRODUCTO (link de redireccion por SKU) ---
 # El SKU del Sheet se busca contra la columna 'id' del feed y se devuelve su 'link'.
@@ -136,7 +142,7 @@ def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_sp
     prefix = "CONDICIONES GENERALES: "
     if text.startswith("CONDICIONES GENERALES"):
         text = text.replace("CONDICIONES GENERALES:", "").strip()
-    
+
     try:
         font_path = font.path.replace("Regular", "SemiBold")
         font_bold = ImageFont.truetype(font_path, font.size)
@@ -146,7 +152,7 @@ def draw_justified_text(draw, text, font, y_start, x_start, x_end, fill, line_sp
     container_width = x_end - x_start
     full_text = prefix + text
     words = full_text.split()
-    
+
     lines = []
     current_line = []
     current_width = 0
@@ -211,11 +217,11 @@ def preciador_width(draw, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2
     return sym_w + gap + num_w + (padding_h * scale * 2)
 
 def draw_efe_preciador(draw, x_center, y_center, text_s, text_price, f_ps, f_pv, scale=1.0, tracking=-2, padding_h=20):
-    num_w = sum(draw.textlength(char, font=f_pv) + tracking for char in text_price) - tracking 
+    num_w = sum(draw.textlength(char, font=f_pv) + tracking for char in text_price) - tracking
     sym_w = draw.textlength(text_s, font=f_ps)
-    gap = 8 * scale 
+    gap = 8 * scale
     full_w = sym_w + gap + num_w
-    h = int(f_pv.size * 1.2 * scale) 
+    h = int(f_pv.size * 1.2 * scale)
     p_h = padding_h * scale
     draw.rounded_rectangle([x_center - full_w//2 - p_h, y_center - h//2, x_center + full_w//2 + p_h, y_center + h//2], radius=15, fill="#FFA002")
     tx = x_center - full_w//2
@@ -241,7 +247,8 @@ def get_sheets_data():
 def generar_diseno(data_input, color_version="AMARILLO"):
     is_flyer = isinstance(data_input, pd.DataFrame)
     row = data_input.iloc[0] if is_flyer else data_input
-    tienda = str(row.get('Tienda', 'LC')).strip().upper()
+    # CAMBIO: la tienda es fija (EFE). Antes era row.get('Tienda', 'LC') y caia en 'LC'.
+    tienda = TIENDA_SCRIPT
     tipo = str(row['Tipo de diseño']).strip().upper()
     formato = str(row['Formato']).upper().strip()
     hay_precio = tiene_precio(row.get('Precio desc'))
@@ -274,7 +281,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         f_s_ind = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", 18 if formato == "STORY" else 15)
         f_l = ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size)
         f_f = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26)
-    except: f_m = f_p = f_pv = f_ps = f_s_ind = f_l = f_f = ImageFont.load_default()
+    except Exception as e:
+        # CAMBIO: antes fallaba en silencio. Si falta TIPOGRAFIA/EFE lo vas a ver en el log.
+        print(f"⚠️  No se pudieron cargar las fuentes desde '{path_fonts}': {e}")
+        f_m = f_p = f_pv = f_ps = f_s_ind = f_l = f_f = ImageFont.load_default()
 
     if formato == "FLYER":
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
@@ -312,7 +322,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 cx_col1, cx_col2 = xp + 125, xp + 345
                 draw.text((cx_col1, yp + box_h - 115), p['Marca'], font=f_m_flyer, fill=(0,0,0), anchor="mm")
                 y_n = yp + box_h - 85
-                for line in textwrap.wrap(str(p['Nombre del producto']), width=18)[:4]: 
+                for line in textwrap.wrap(str(p['Nombre del producto']), width=18)[:4]:
                     draw.text((cx_col1, y_n), line, font=f_p, fill=(0,0,0), anchor="mm"); y_n += 22
                 f_pv_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 53)
                 f_ps_fly = ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 30)
@@ -381,7 +391,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 if hay_precio:
                     draw_efe_preciador(draw, PREC_CX, 910, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
                 draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 990, (255,255,255), force_justify=True)
-            else: 
+            else:
                 pi.thumbnail((682, 682)); img.paste(pi, (310, 287), pi)
                 draw.text((91, 639), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
                 lines = textwrap.wrap(row['Nombre del producto'], width=13); ny = 675
@@ -457,26 +467,27 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     fname = f"{sku_limpio}_{formato}_{tienda}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
 
-def resolver_columna(df, nombre_buscado):
-    """Devuelve el nombre REAL de la columna en df que coincide con nombre_buscado
-    ignorando mayusculas/minusculas y espacios extra. None si no existe ninguna."""
-    objetivo = nombre_buscado.strip().lower()
-    for c in df.columns:
-        if c.strip().lower() == objetivo:
-            return c
-    return None
-
 # --- INICIO DE EJECUCIÓN (OPTIMIZADO PARA EVITAR ERROR 429) ---
 data, res_sheet, viejos = get_sheets_data()
 
-# AJUSTE: este script solo debe procesar filas de EFE, nunca las de LC.
-# Sin este filtro se generaban llaves tipo SKU_PPL_LC_EFE que nunca encontraban fondo.
-col_tienda = resolver_columna(data, 'Tienda')
-if col_tienda is None:
-    print(f"❌ No se encontró una columna 'Tienda' en Hoja 1. Columnas disponibles: {list(data.columns)}")
+# CAMBIO: diagnostico. Muestra TODAS las columnas cuyo nombre parece "tienda"
+# (incluidas columnas ocultas del Sheet) y que valores traen.
+cols_tienda = [c for c in data.columns if c.strip().lower() == 'tienda']
+print(f"DEBUG: Columnas en Hoja 1: {list(data.columns)}")
+print(f"DEBUG: Columnas tipo 'tienda' encontradas: {cols_tienda}")
+for c in cols_tienda:
+    print(f"DEBUG:   '{c}' -> valores: {data[c].astype(str).str.strip().str.upper().value_counts().to_dict()}")
+
+if not cols_tienda:
+    print("❌ No se encontró ninguna columna 'Tienda' en Hoja 1.")
     raise SystemExit(1)
-data = data[data[col_tienda].astype(str).str.strip().str.upper() == 'EFE'].reset_index(drop=True)
-print(f"DEBUG: Filas EFE detectadas (columna real: '{col_tienda}'): {len(data)}")
+
+# CAMBIO: una fila es de EFE si CUALQUIERA de las columnas tipo 'tienda' dice EFE.
+mask_efe = pd.Series(False, index=data.index)
+for c in cols_tienda:
+    mask_efe |= data[c].astype(str).str.strip().str.upper() == TIENDA_SCRIPT
+data = data[mask_efe].reset_index(drop=True)
+print(f"DEBUG: Filas {TIENDA_SCRIPT} a procesar: {len(data)}")
 
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
@@ -485,10 +496,10 @@ filas_para_google = []
 # Ciclo 1: Productos Individuales
 for idx, row in data.iterrows():
     f_v = str(row['Formato']).upper().strip()
-    if f_v in ["FLYER", "", "0"]: continue 
-    tienda = str(row.get('Tienda', 'LC')).strip().upper()
+    if f_v in ["FLYER", "", "0"]: continue
+    tienda = TIENDA_SCRIPT  # CAMBIO: antes row.get('Tienda', 'LC')
     sku_val = str(row['SKU']).replace("/", "-").replace("\\", "-")
-    llave = f"{sku_val}_{f_v}_{tienda}_EFE".upper()
+    llave = f"{sku_val}_{f_v}_{tienda}".upper()  # CAMBIO: queda SKU_FORMATO_EFE
     if llave not in viejos:
         print(f"🎨 Generando: {llave}")
         url = generar_diseno(row)
@@ -502,15 +513,14 @@ fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
 for id_f, group in fly_g.groupby('ID_Flyer'):
     if str(id_f) in ["0", "0.0", ""]: continue
     id_limpio = str(id_f).replace("/", "-").replace("\\", "-")
-    llave = f"{id_limpio}_FLYER_EFE".upper()
+    llave = f"{id_limpio}_FLYER_{TIENDA_SCRIPT}".upper()
     if llave not in viejos:
         print(f"🎨 Generando Flyer: {llave}")
         url = generar_diseno(group)
         if url:
             # AJUSTE: link web del flyer = link del primer SKU del grupo (ver FLYER_USA_PRIMER_SKU)
-            tienda_fly = str(group.iloc[0].get('Tienda', 'EFE')).strip().upper()
-            lw = link_web(tienda_fly, group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
-            filas_para_google.append([h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url, lw])
+            lw = link_web(TIENDA_SCRIPT, group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
+            filas_para_google.append([h_lima, llave, TIENDA_SCRIPT, group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url, lw])
 
 # --- ESCRITURA FINAL MASIVA (SOLO 1 PETICIÓN) ---
 if filas_para_google:
