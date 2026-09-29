@@ -251,8 +251,16 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         precio_val = str(row['Precio desc'])
     path_fonts, path_fondos = f"TIPOGRAFIA/{tienda}", f"FONDOS/{tienda}/{tipo}"
     f_names = [f"{tienda} - {tipo} - {formato}", f"{tienda} - REPOWER {tipo} - {formato}"]
-    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in f_names for e in [".jpg", ".png", ".JPG"] if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
-    if not full_p: return None
+    # AJUSTE: se agregan .jpeg/.JPEG. Los flyers estan exportados en .jpeg y no entraban
+    # en la busqueda, asi que generar_diseno devolvia None y el flyer se perdia en silencio.
+    EXTENSIONES = [".jpg", ".jpeg", ".png", ".JPG", ".JPEG", ".PNG"]
+    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in f_names for e in EXTENSIONES if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
+    if not full_p:
+        # AJUSTE: antes era un return None mudo. Ahora dice exactamente que archivo falta.
+        print(f"❌ FONDO NO ENCONTRADO para {tienda} / {tipo} / {formato}. "
+              f"Se buscaron estos nombres en '{path_fondos}': "
+              f"{[n + e for n in f_names for e in EXTENSIONES]}")
+        return None
     img = Image.open(full_p).convert("RGB"); draw = ImageDraw.Draw(img)
     try:
         p_size = 90; s_size = 35; l_size = 10
@@ -449,8 +457,27 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     fname = f"{sku_limpio}_{formato}_{tienda}.jpg"
     img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
 
+def resolver_columna(df, nombre_buscado):
+    """Devuelve el nombre REAL de la columna en df que coincide con nombre_buscado
+    ignorando mayusculas/minusculas y espacios extra. None si no existe ninguna."""
+    objetivo = nombre_buscado.strip().lower()
+    for c in df.columns:
+        if c.strip().lower() == objetivo:
+            return c
+    return None
+
 # --- INICIO DE EJECUCIÓN (OPTIMIZADO PARA EVITAR ERROR 429) ---
 data, res_sheet, viejos = get_sheets_data()
+
+# AJUSTE: este script solo debe procesar filas de EFE, nunca las de LC.
+# Sin este filtro se generaban llaves tipo SKU_PPL_LC_EFE que nunca encontraban fondo.
+col_tienda = resolver_columna(data, 'Tienda')
+if col_tienda is None:
+    print(f"❌ No se encontró una columna 'Tienda' en Hoja 1. Columnas disponibles: {list(data.columns)}")
+    raise SystemExit(1)
+data = data[data[col_tienda].astype(str).str.strip().str.upper() == 'EFE'].reset_index(drop=True)
+print(f"DEBUG: Filas EFE detectadas (columna real: '{col_tienda}'): {len(data)}")
+
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 filas_para_google = []
