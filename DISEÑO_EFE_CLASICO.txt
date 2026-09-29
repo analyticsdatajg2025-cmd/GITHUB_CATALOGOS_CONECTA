@@ -135,6 +135,25 @@ def pegar_en_caja(img, pi, cx, y_ini, y_fin, max_w):
     y = int(y_ini + (max_h - pi.height) / 2)
     img.paste(pi, (x, y), pi)
 
+# --- CIRCULO NARANJA DE LOS FONDOS "PRECIO IRRESISTIBLE" (medido sobre los fondos) ---
+# (ancho_ref, alto_ref, centro_x, centro_y, diametro) en pixeles del fondo original.
+# Si el fondo real tiene otro tamano, se escala proporcionalmente.
+CIRCULO_IRRESISTIBLE = {
+    "PPL":     (1081, 1081, 662,  648, 671),
+    "STORY":   (1081, 1921, 551, 1049, 952),
+    "DISPLAY": (1001,  527, 654,  263, 452),
+}
+# Que tan grande sale el producto respecto al diametro del circulo (1.0 = mismo ancho/alto).
+FACTOR_IRRESISTIBLE = {"PPL": 0.85, "STORY": 0.85, "DISPLAY": 0.85}
+
+def pegar_en_circulo(img, pi, formato):
+    """Recorta el aire de la foto, la escala al circulo naranja y la centra en el."""
+    ref_w, ref_h, cx, cy, d = CIRCULO_IRRESISTIBLE[formato]
+    sx, sy = img.width / ref_w, img.height / ref_h
+    cx, cy, d = cx * sx, cy * sy, d * min(sx, sy)
+    lado = d * FACTOR_IRRESISTIBLE[formato]
+    pegar_en_caja(img, pi, cx, int(cy - lado / 2), int(cy + lado / 2), lado)
+
 def tiene_precio(valor):
     """True si la celda 'Precio desc' trae algo valido para pintar."""
     if valor is None:
@@ -429,7 +448,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     draw_efe_preciador(draw, PREC_CX, 910, "S/", precio_val, f_ps, f_pv, scale=1.0, tracking=-3)
                 draw_justified_text(draw, str(row['Legales']), f_l, 998, 90, 990, (255,255,255), force_justify=True)
             else:
-                pi.thumbnail((682, 682)); img.paste(pi, (310, 287), pi)
+                # CAMBIO: foto centrada en el circulo naranja del fondo
+                pegar_en_circulo(img, pi, "PPL")
                 draw.text((91, 639), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
                 lines = textwrap.wrap(row['Nombre del producto'], width=13); ny = 675
                 for lp in lines[:4]: draw.text((91, ny), lp, font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 26), fill=(255,255,255), anchor="ls"); ny += 30
@@ -464,7 +484,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     draw_efe_preciador(draw, 780, 1650, "S/", precio_val, ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 64), ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 110), scale=1.1, padding_h=30)
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800, 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
             else:
-                pi.thumbnail((935, 935)); img.paste(pi, (78, 580), pi)
+                # CAMBIO: foto centrada en el circulo naranja del fondo
+                pegar_en_circulo(img, pi, "STORY")
                 # Sin precio: 1 sola columna, el bloque se centra
                 lx = 147 if hay_precio else STORY_X_SIN_PRECIO
                 anchor_txt = "ls" if hay_precio else "ms"
@@ -492,7 +513,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 # Sin precio: los legales suben 5px
                 draw_justified_text(draw, str(row['Legales']), f_l, 485 if hay_precio else 480, 40, 960, (255,255,255), force_justify=True)
             else:
-                pi.thumbnail((485, 465)); img.paste(pi, (412, 24), pi); lx = 91
+                # CAMBIO: foto centrada en el circulo naranja del fondo
+                pegar_en_circulo(img, pi, "DISPLAY"); lx = 91
                 draw.text((lx, 219), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
                 ny = 255
                 for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((lx, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 25
