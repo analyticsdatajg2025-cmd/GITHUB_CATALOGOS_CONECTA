@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageChops
 from datetime import datetime, timedelta
 from io import BytesIO
 import textwrap
@@ -104,10 +104,36 @@ FLYER_GAP_SKU      = 4     # separacion extra entre nombre y SKU en el flyer sin
 DISPLAY_IMG_Y      = 85    # antes 25  -> baja 60px para alinearse con el bloque de texto
 DISPLAY_ZONA_X_INI = 440   # la foto se centra entre este X y el borde derecho
 DISPLAY_IMG_DX     = 0     # ajuste fino horizontal del DISPLAY
-PPL_IMG_Y          = 303   # antes 243 -> baja 60px, deja de pisar la caja blanca del logo
+# PPL: la foto se ajusta a una CAJA segura (entre la caja blanca del logo y la fila de texto).
+# Se recorta el aire transparente de la foto y se escala para que quepa entera en la caja,
+# asi un producto alto (refri) ya no baja hasta el nombre y un TV queda del mismo tamano.
+PPL_CAJA_Y_INI     = 425   # borde superior de la caja (debajo de la caja blanca)
+PPL_CAJA_Y_FIN     = 845   # borde inferior de la caja (encima de marca/nombre/precio)
+PPL_CAJA_ANCHO     = 560   # ancho maximo de la foto
 PPL_IMG_DX         = 0     # ajuste fino horizontal del PPL (la foto va centrada)
 STORY_IMG_Y        = 686   # antes 606 -> baja 80px, queda centrada entre el logo y el texto
 STORY_IMG_DX       = 0     # ajuste fino horizontal del STORY (la foto va centrada)
+
+def recortar_aire(pi):
+    """Quita el borde vacio de la foto (transparente o blanco) para medir solo el producto."""
+    pi = pi.convert("RGBA")
+    bbox = pi.getchannel("A").getbbox()
+    if not bbox or bbox == (0, 0, pi.width, pi.height):
+        # Foto sin transparencia: se recorta contra fondo blanco
+        fondo = Image.new("RGB", pi.size, (255, 255, 255))
+        diff = ImageChops.difference(pi.convert("RGB"), fondo).convert("L").point(lambda v: 255 if v > 12 else 0)
+        bbox = diff.getbbox() or bbox
+    return pi.crop(bbox) if bbox else pi
+
+def pegar_en_caja(img, pi, cx, y_ini, y_fin, max_w):
+    """Escala la foto para que quepa entera en la caja (max_w x alto) y la centra en ella."""
+    pi = recortar_aire(pi)
+    max_h = y_fin - y_ini
+    escala = min(max_w / pi.width, max_h / pi.height)
+    pi = pi.resize((max(1, int(pi.width * escala)), max(1, int(pi.height * escala))), Image.Resampling.LANCZOS)
+    x = int(cx - pi.width / 2)
+    y = int(y_ini + (max_h - pi.height) / 2)
+    img.paste(pi, (x, y), pi)
 
 def tiene_precio(valor):
     """True si la celda 'Precio desc' trae algo valido para pintar."""
@@ -369,8 +395,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "PPL":
             if "EFERTON" in tipo:
                 # AJUSTE: imagen -80px por lado (647x670), +20px en X y +70px en Y
-                # CAMBIO: foto centrada en el ancho del fondo y bajada (ver PPL_IMG_Y)
-                pi.thumbnail((647, 670)); img.paste(pi, ((img.width - pi.width) // 2 + PPL_IMG_DX, PPL_IMG_Y), pi)
+                # CAMBIO: la foto se ajusta a la caja segura (ver PPL_CAJA_*), sin pisar el texto
+                pegar_en_caja(img, pi, img.width // 2 + PPL_IMG_DX, PPL_CAJA_Y_INI, PPL_CAJA_Y_FIN, PPL_CAJA_ANCHO)
                 f_marca_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
                 draw.text((90, 930), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor="ls")
 
