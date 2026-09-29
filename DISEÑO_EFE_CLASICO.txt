@@ -99,6 +99,16 @@ PPL_X_FIN_ZONA     = 990   # limite derecho util para el nombre en PPL sin preci
 PPL_MARGEN_MARCA   = 45    # aire entre la marca y el bloque de nombre en PPL sin precio
 FLYER_GAP_SKU      = 4     # separacion extra entre nombre y SKU en el flyer sin precio
 
+# --- AJUSTE DE POSICION DE LA FOTO (solo EFERTON) ---
+# Para mover la foto solo cambia estos numeros. Positivo = baja / va a la derecha.
+DISPLAY_IMG_Y      = 85    # antes 25  -> baja 60px para alinearse con el bloque de texto
+DISPLAY_ZONA_X_INI = 440   # la foto se centra entre este X y el borde derecho
+DISPLAY_IMG_DX     = 0     # ajuste fino horizontal del DISPLAY
+PPL_IMG_Y          = 303   # antes 243 -> baja 60px, deja de pisar la caja blanca del logo
+PPL_IMG_DX         = 0     # ajuste fino horizontal del PPL (la foto va centrada)
+STORY_IMG_Y        = 686   # antes 606 -> baja 80px, queda centrada entre el logo y el texto
+STORY_IMG_DX       = 0     # ajuste fino horizontal del STORY (la foto va centrada)
+
 def tiene_precio(valor):
     """True si la celda 'Precio desc' trae algo valido para pintar."""
     if valor is None:
@@ -359,7 +369,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         if formato == "PPL":
             if "EFERTON" in tipo:
                 # AJUSTE: imagen -80px por lado (647x670), +20px en X y +70px en Y
-                pi.thumbnail((647, 670)); img.paste(pi, (156, 243), pi)
+                # CAMBIO: foto centrada en el ancho del fondo y bajada (ver PPL_IMG_Y)
+                pi.thumbnail((647, 670)); img.paste(pi, ((img.width - pi.width) // 2 + PPL_IMG_DX, PPL_IMG_Y), pi)
                 f_marca_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
                 draw.text((90, 930), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor="ls")
 
@@ -403,7 +414,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), f_l, 998, 73, 1007, (255,255,255), force_justify=True)
         elif formato == "STORY":
             if "EFERTON" in tipo:
-                pi.thumbnail((956, 956)); img.paste(pi, (72, 606), pi); ay = 1600
+                # CAMBIO: foto centrada en el ancho del fondo y bajada (ver STORY_IMG_Y)
+                pi.thumbnail((956, 956)); img.paste(pi, ((img.width - pi.width) // 2 + STORY_IMG_DX, STORY_IMG_Y), pi); ay = 1600
                 # AJUSTE: marca, nombre y SKU corridos otros 10px a la izquierda (antes 219, original 239)
                 # Sin precio: 1 sola columna, el bloque se centra
                 x_txt = 209 if hay_precio else STORY_X_SIN_PRECIO
@@ -441,7 +453,10 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "DISPLAY":
             if "EFERTON" in tipo:
                 # AJUSTE: imagen 460x460 y +10px en X (antes 430)
-                pi.thumbnail((460, 460)); img.paste(pi, (440, 25), pi); cx = 260
+                # CAMBIO: foto centrada en la zona derecha (de DISPLAY_ZONA_X_INI al borde) y bajada
+                pi.thumbnail((460, 460))
+                x_disp = DISPLAY_ZONA_X_INI + (img.width - DISPLAY_ZONA_X_INI - pi.width) // 2 + DISPLAY_IMG_DX
+                img.paste(pi, (x_disp, DISPLAY_IMG_Y), pi); cx = 260
                 draw.text((cx, 250), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")
                 ny = 290
                 for line in textwrap.wrap(str(row['Nombre del producto']), width=20)[:2]: draw.text((cx, ny), line, font=f_p, fill=(255,255,255), anchor="mm"); ny += 25
