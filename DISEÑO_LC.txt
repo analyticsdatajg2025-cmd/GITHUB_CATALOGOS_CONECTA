@@ -14,6 +14,12 @@ USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
+# --- AJUSTE: marca que se escribe en la columna C de 'Resultados' ---
+# Antes no se enviaba y habia que ponerla a mano. El append es POSICIONAL,
+# asi que el orden debe ser exactamente:
+#   A Fecha | B ID | C Tienda | D Diseño | E Formato | F Color | G Link Imagen
+TIENDA_SCRIPT = "LC"
+
 # --- AJUSTES PARA PIEZAS SIN PRECIO (separación entre nombre y SKU) ---
 GAP_SKU_SIN_PRECIO = {"DISPLAY": 15, "STORY": 12, "PPL": 6, "FLYER": 2}
 
@@ -322,7 +328,11 @@ for idx, row in data.iterrows():
             print(f"🎨 Generando pieza nueva: {llave}")
             url = generar_diseno(row, c)
             if url: 
-                filas_para_google.append([h_lima, llave, row['Tipo de diseño'], f_v, c, url])
+                # AJUSTE: se agrega TIENDA_SCRIPT en la posicion 3 (columna C).
+                # Antes se mandaban 6 valores y todo quedaba corrido una columna a la
+                # izquierda, por eso habia que escribir "LC" a mano en el Sheet.
+                # Orden: Fecha | ID | Tienda | Diseño | Formato | Color | Link Imagen
+                filas_para_google.append([h_lima, llave, TIENDA_SCRIPT, row['Tipo de diseño'], f_v, c, url])
                 archivos_generados += 1
 
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
@@ -336,7 +346,8 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
             print(f"🎨 Generando Flyer nuevo: {llave}")
             url = generar_diseno(group, c)
             if url: 
-                filas_para_google.append([h_lima, llave, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
+                # AJUSTE: mismo fix de columna Tienda que en el ciclo de piezas individuales
+                filas_para_google.append([h_lima, llave, TIENDA_SCRIPT, group.iloc[0]['Tipo de diseño'], "FLYER", c, url])
                 archivos_generados += 1
 
 if filas_para_google:
