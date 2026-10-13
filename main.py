@@ -432,6 +432,18 @@ filas_para_google = []
 
 print(f"DEBUG: Filas LC detectadas (columna real: '{col_tienda}'): {len(data)}")
 
+def hay_que_generar(llave, nombre_archivo):
+    """True si la pieza falta: o no esta registrada en 'Resultados', o su archivo
+    ya no existe en output/ (p.ej. despues de una limpieza del repo).
+    AJUSTE: antes solo miraba el Sheet, asi que si se borraban las imagenes el
+    script las saltaba igual y todos los links quedaban en 404."""
+    if llave not in viejos:
+        return True
+    if not os.path.exists(os.path.join("output", nombre_archivo)):
+        print(f"♻️  {llave} esta en Resultados pero falta output/{nombre_archivo}. Se regenera.")
+        return True
+    return False
+
 for idx, row in data.iterrows():
     f_v = str(row['Formato']).upper().strip()
     if f_v in ["FLYER", "", "0"]: continue
@@ -442,10 +454,14 @@ for idx, row in data.iterrows():
     for c in versiones:
         sku_val = str(row['SKU']).replace("/", "-").replace("\\", "-")
         llave = f"{sku_val}_{f_v}_{c}".upper()
-        if llave not in viejos:
-            print(f"🎨 Generando pieza nueva: {llave}")
+        archivo = f"{sku_val}_{f_v}_{c}.jpg"
+        _era_nueva = llave not in viejos
+        if hay_que_generar(llave, archivo):
+            print(f"🎨 Generando pieza: {llave}")
             url = generar_diseno(row, c)
-            if url:
+            # Si la llave ya existia, solo se repone el archivo: la fila del Sheet
+            # ya apunta a esa URL, asi que no se duplica el registro.
+            if url and _era_nueva:
                 # AJUSTE: se agrega TIENDA_SCRIPT en la posicion 3 (columna C).
                 # Antes se mandaban 6 valores y todo quedaba corrido una columna a la
                 # izquierda, por eso habia que escribir "LC" a mano en el Sheet.
@@ -463,10 +479,15 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
     versiones = ["AMARILLO"]
     for c in versiones:
         llave = f"{id_f}_FLYER_{c}".upper()
-        if llave not in viejos:
-            print(f"🎨 Generando Flyer nuevo: {llave}")
+        # El archivo del flyer se nombra con el SKU del PRIMER producto del grupo
+        # (asi lo guarda generar_diseno), no con el ID_Flyer.
+        _sku_fly = str(group.iloc[0]['SKU'] or id_f).replace("/", "-").replace("\\", "-")
+        archivo = f"{_sku_fly}_FLYER_{c}.jpg"
+        _era_nueva = llave not in viejos
+        if hay_que_generar(llave, archivo):
+            print(f"🎨 Generando Flyer: {llave}")
             url = generar_diseno(group, c)
-            if url:
+            if url and _era_nueva:
                 # AJUSTE: mismo fix de columna Tienda que en el ciclo de piezas individuales
                 # AJUSTE: link web del flyer = link del primer SKU del grupo (ver FLYER_USA_PRIMER_SKU)
                 lw = link_web(TIENDA_SCRIPT, group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
