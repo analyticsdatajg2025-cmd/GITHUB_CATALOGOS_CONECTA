@@ -343,10 +343,21 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 27
             if hay_precio:
-                tw = draw.textlength("S/", font=f_ps) + draw.textlength(precio_val, font=f_pv) + 15; px = cx - tw//2 + D("precio_dx")
-                _y_prec = ny + 55 + D("precio_dy")
+                # AJUSTE: el precio NO hereda los desplazamientos del texto. Su x y su y se
+                # miden desde el layout original, asi que 'precio_dx'/'precio_dy' son
+                # absolutos y no se suman a 'txt_dx'/'txt_dy' (antes se duplicaban y el
+                # bloque se salia del lienzo por la izquierda).
+                cx_precio = 255 + D("precio_dx")
+                _ny_base = ny - D("txt_dy")
+                tw = draw.textlength("S/", font=f_ps) + draw.textlength(precio_val, font=f_pv) + 15
+                px = cx_precio - tw//2
+                if px < 20:
+                    print(f"⚠️  PRECIO FUERA DEL LIENZO en DISPLAY / {tipo}: empezaria en x={int(px)}. "
+                          f"Se recorta a x=20; baja el valor absoluto de 'precio_dx'.")
+                    px = 20
+                _y_prec = _ny_base + 55 + D("precio_dy")
                 draw.text((px, _y_prec), "S/ ", font=f_ps, fill=txt_c, anchor="lm"); draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, _y_prec), precio_val, font=f_pv, fill=txt_c, anchor="lm")
-                draw.text((cx + D("precio_dx"), ny + 100 + D("precio_dy")), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
+                draw.text((cx_precio, _ny_base + 100 + D("precio_dy")), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
             else:
                 # Sin precio: el SKU sube y queda pegado al nombre
                 draw.text((cx, ny + GAP_SKU_SIN_PRECIO["DISPLAY"]), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
