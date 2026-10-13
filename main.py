@@ -14,19 +14,19 @@ USER_GH = "analyticsdatajg2025-cmd"
 REPO_GH = "GITHUB_CATALOGOS_CONECTA"
 RAW_URL = f"https://raw.githubusercontent.com/{USER_GH}/{REPO_GH}/main/output/"
 
-# --- FEEDS DE PRODUCTO (link de redireccion por SKU) ---
+# --- AJUSTE: marca que se escribe en la columna C de 'Resultados' ---
+# Antes no se enviaba y habia que ponerla a mano. El append es POSICIONAL,
+# asi que el orden debe ser exactamente:
+#   A Fecha | B ID | C Tienda | D Diseño | E Formato | F Color | G Link Imagen
+TIENDA_SCRIPT = "LC"
+
+# --- FEEDS DE PRODUCTO (columna H 'Link web' de 'Resultados') ---
 # El SKU del Sheet se busca contra la columna 'id' del feed y se devuelve su 'link'.
 # El feed se descarga UNA sola vez por corrida y queda en cache.
 FEEDS = {
     "LC":  "https://www.lacuracao.pe/media/feed/google_curacao.txt",
     "EFE": "https://www.efe.com.pe/media/feed/google_prueba_copy_copy.txt",
 }
-TIENDA_FEED = "LC"   # este script es de LC, asi que usa el feed de LC
-
-# --- AJUSTE: marca que se escribe en la columna C de 'Resultados' ---
-# El append es POSICIONAL, asi que el orden debe ser exactamente:
-#   A Fecha | B ID | C Tienda | D Diseño | E Formato | F Color | G Link Imagen | H Link web
-TIENDA_SCRIPT = "LC"
 TEXTO_SIN_FEED = "NO SE ENCUENTRA EN EL FEED"
 
 # Un flyer agrupa varios SKUs y no tiene una sola pagina de producto.
@@ -95,6 +95,54 @@ def link_web(tienda, sku):
 # --- AJUSTES PARA PIEZAS SIN PRECIO (separación entre nombre y SKU) ---
 GAP_SKU_SIN_PRECIO = {"DISPLAY": 15, "STORY": 12, "PPL": 6, "FLYER": 2}
 
+# --- AJUSTE: medidas obligatorias por formato ---
+# Si el fondo no mide esto, el lienzo real no coincide con las coordenadas del
+# código y TODO queda descentrado. Se normaliza antes de pintar y se avisa.
+MEDIDAS_FORMATO = {
+    "PPL":     (1080, 1080),
+    "STORY":   (1080, 1920),
+    "FLYER":   (1080, 1920),
+    "DISPLAY": (1000,  526),
+}
+
+# --- AJUSTE: márgenes de la STORY (texto izquierda / precio derecha, espejados) ---
+STORY_MARGEN = 150
+
+# ======================================================================
+# AJUSTES POR CAMPAÑA  (mover elementos sin tocar el resto del codigo)
+# ======================================================================
+# La clave es el "Tipo de diseño" del Sheet, EN MAYUSCULAS.
+# Una campaña que NO figure aqui usa el layout de siempre, sin ningun cambio.
+#
+#   dx  -> mover a la DERECHA   (negativo = izquierda)
+#   dy  -> mover hacia ABAJO    (negativo = arriba)
+#
+# Elementos por formato:
+#   PPL / STORY / DISPLAY: img_dx img_dy  txt_dx txt_dy  precio_dx precio_dy  legales_dy
+#   FLYER:                 fecha_dy  grid_dy  legales_dy
+#
+# "texto_color" fuerza el color del texto. None = automatico segun el fondo.
+AJUSTES_CAMPANA = {
+    "KV COMPUTO LC": {
+        "texto_color": None,
+        "PPL":     {"img_dx": -2, "img_dy": 199, "txt_dx": -145, "txt_dy": 65,
+                    "precio_dx": 54, "precio_dy": 82, "legales_dy": 40},
+        "DISPLAY": {"img_dx": -70, "img_dy": -1, "txt_dx": -86, "txt_dy": -4,
+                    "precio_dx": -79},
+        "FLYER":   {"fecha_dy": 65, "grid_dy": 35, "legales_dy": 10},
+        # STORY sin calibrar: usa las coordenadas de siempre.
+    },
+}
+
+def normalizar_lienzo(img, formato, ruta_fondo):
+    """Fuerza el fondo a la medida oficial del formato. Devuelve la imagen lista."""
+    esperado = MEDIDAS_FORMATO.get(formato)
+    if esperado and img.size != esperado:
+        print(f"⚠️  FONDO FUERA DE MEDIDA: {ruta_fondo} es {img.size}, se esperaba {esperado}. "
+              f"Se normaliza (reexportar el fondo es el arreglo correcto).")
+        img = img.resize(esperado, Image.Resampling.LANCZOS)
+    return img
+
 def tiene_precio(valor):
     """True si la celda 'Precio desc' trae algo válido para pintar."""
     if valor is None:
@@ -161,6 +209,18 @@ def get_sheets_data():
     sheet = client.open_by_key("1PmvCyC3d0VvvZSdvWM73NYusrYevVYtRzVs2gbxjw1M")
     data = pd.DataFrame(sheet.worksheet("Hoja 1").get_all_records())
     data.columns = [c.strip() for c in data.columns]
+
+    # FIX: normaliza el nombre de la columna de marca (Tienda o RETAIL), sin importar mayúsculas
+    col_map = {c.lower(): c for c in data.columns}
+    col_tienda_real = next((col_map[c] for c in ['tienda', 'retail'] if c in col_map), None)
+    if col_tienda_real is None:
+        raise KeyError(
+            "No se encontró una columna de marca ('Tienda' o 'RETAIL') en 'Hoja 1'. "
+            f"Columnas detectadas: {list(data.columns)}"
+        )
+    if col_tienda_real != 'Tienda':
+        data = data.rename(columns={col_tienda_real: 'Tienda'})
+
     res_sheet = sheet.worksheet("Resultados")
     v_act = res_sheet.get_all_values()
     viejos = {r[1].strip().upper() for r in v_act[1:] if len(r) > 1}
@@ -175,6 +235,13 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     txt_c = (0,0,0) if color_version == "AMARILLO" else (255,255,255)
     border_c = (254, 215, 0) if color_version == "AMARILLO" else (10, 6, 60)
 
+    # --- AJUSTES POR CAMPAÑA: D("clave") devuelve el desplazamiento, o 0 si no hay ---
+    _camp = AJUSTES_CAMPANA.get(tipo.strip().upper(), {})
+    def D(clave):
+        return _camp.get(formato, {}).get(clave, 0)
+    if _camp.get("texto_color"):
+        txt_c = tuple(_camp["texto_color"])
+
     hay_precio = tiene_precio(row.get('Precio desc'))
     try:
         precio_val = "{:,}".format(int(float(row['Precio desc'])))
@@ -182,15 +249,20 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         precio_val = str(row['Precio desc'])
 
     fname_base = f"LC - {tipo} - {'FLYER' if formato == 'FLYER' else formato}"
-    # CAMBIO: se agregan .jpeg/.JPEG a la busqueda del fondo
-    candidatos = [f"{fname_base} FONDO {color_version}", f"{fname_base} {color_version}", fname_base]
+    # AJUSTE: se agregan .jpeg/.JPEG. Los flyers estaban exportados en .jpeg y no entraban
+    # en la busqueda, asi que generar_diseno devolvia None y el flyer se perdia en silencio.
     EXTENSIONES = [".png", ".jpg", ".jpeg", ".PNG", ".JPG", ".JPEG"]
-    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in candidatos for e in EXTENSIONES if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
+    VARIANTES = [f"{fname_base} FONDO {color_version}", f"{fname_base} {color_version}", fname_base]
+    full_p = next((os.path.join(path_fondos, f"{v}{e}") for v in VARIANTES for e in EXTENSIONES if os.path.exists(os.path.join(path_fondos, f"{v}{e}"))), None)
     if not full_p:
-        # CAMBIO: antes era un return None mudo. Ahora dice que fondo falta.
-        print(f"❌ FONDO NO ENCONTRADO en '{path_fondos}'. Se buscaron: {[c + e for c in candidatos for e in ('.png', '.jpg', '.jpeg')]}")
+        # AJUSTE: antes era un return None mudo. Ahora dice exactamente que falta.
+        print(f"❌ FONDO NO ENCONTRADO para LC / {tipo} / {formato} / {color_version}. "
+              f"Se buscaron estos nombres en '{path_fondos}': "
+              f"{[n + e for n in VARIANTES for e in EXTENSIONES]}")
         return None
-    img = Image.open(full_p).convert("RGB"); draw = ImageDraw.Draw(img)
+    img = Image.open(full_p).convert("RGB")
+    img = normalizar_lienzo(img, formato, full_p)  # AJUSTE: lienzo a medida oficial antes de pintar
+    draw = ImageDraw.Draw(img)
 
     try:
         f_f = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 24)
@@ -208,11 +280,14 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     if formato == "FLYER":
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
         wf = draw.textlength(f_txt, font=f_f)
-        x_fecha = 64
-        # AJUSTE: Color Blanco para fecha y contorno en el Flyer
+        # AJUSTE: fecha centrada y bajada para que no se solape con el logo de LA CURACAO.
+        # La banda amarilla termina en y=308 y los logos bajan hasta y~228, asi que el
+        # recuadro (50px de alto) entra justo entre 248 y 298. Antes: pegado a la derecha en 235-285.
+        x_fecha = (1080 - (wf + 35)) // 2
+        y_fecha_top, y_fecha_bot = 248 + D("fecha_dy"), 298 + D("fecha_dy")
         color_blanco = (255, 255, 255)
-        draw.rounded_rectangle([x_fecha, 235, x_fecha+wf+35, 285], radius=10, outline=color_blanco, width=3)
-        draw.text((x_fecha+(wf+35)//2, 260), f_txt, font=f_f, fill=color_blanco, anchor="mm")
+        draw.rounded_rectangle([x_fecha, y_fecha_top, x_fecha+wf+35, y_fecha_bot], radius=10, outline=color_blanco, width=3)
+        draw.text((x_fecha+(wf+35)//2, (y_fecha_top + y_fecha_bot)//2), f_txt, font=f_f, fill=color_blanco, anchor="mm")
 
         azul_oscuro = (10, 6, 60)
         num_productos = len(data_input)
@@ -225,7 +300,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             p_hay_precio = tiene_precio(p.get('Precio desc'))
             try: p_val = "{:,}".format(int(float(p['Precio desc'])))
             except: p_val = str(p['Precio desc'])
-            xp = 64 + (i % 2) * (box_w + 40); yp = 340 + (i // 2) * (box_h + gap_y)
+            xp = 64 + (i % 2) * (box_w + 40); yp = 340 + D("grid_dy") + (i // 2) * (box_h + gap_y)
             draw.rounded_rectangle([xp, yp, xp+box_w, yp+box_h], radius=15, fill=(255,255,255), outline=border_c, width=2)
             try:
                 pi_url = p['Foto del producto calado']; pi = Image.open(BytesIO(requests.get(pi_url).content)).convert("RGBA"); pi.thumbnail((img_size, img_size), Image.Resampling.LANCZOS)
@@ -256,74 +331,101 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw.text((cc, ny + GAP_SKU_SIN_PRECIO["FLYER"]), str(p['SKU']), font=f_s_fly, fill=azul_oscuro, anchor="mm")
 
         # AJUSTE: Legales en Blanco para Flyer
-        y_legales_fijo = 1815; f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
+        y_legales_fijo = 1815 + D("legales_dy"); f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 16); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
         draw.text((64, y_legales_fijo), tit_legal, font=f_l_bold, fill=color_blanco)
         draw_justified_text(draw, cuerpo_legal, f_l, y_legales_fijo, 64, 1016, color_blanco, line_spacing=2, prefix_width=ancho_negrita)
     else:
         # Otros formatos mantienen txt_c (Amarillo/Blanco según versión)
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         if formato == "DISPLAY":
-            pi.thumbnail((483, 483)); img.paste(pi, (423, 25), pi); cx, ny = 255, 245
-            draw.text((cx, 195), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
+            pi.thumbnail((483, 483), Image.Resampling.LANCZOS); img.paste(pi, (423 + D("img_dx"), 25 + D("img_dy")), pi); cx, ny = 255 + D("txt_dx"), 245 + D("txt_dy")
+            draw.text((cx, 195 + D("txt_dy")), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 27
             if hay_precio:
-                tw = draw.textlength("S/", font=f_ps) + draw.textlength(precio_val, font=f_pv) + 15; px = cx - tw//2
-                draw.text((px, ny + 55), "S/ ", font=f_ps, fill=txt_c, anchor="lm"); draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, ny + 55), precio_val, font=f_pv, fill=txt_c, anchor="lm")
-                draw.text((cx, ny + 100), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
+                tw = draw.textlength("S/", font=f_ps) + draw.textlength(precio_val, font=f_pv) + 15; px = cx - tw//2 + D("precio_dx")
+                _y_prec = ny + 55 + D("precio_dy")
+                draw.text((px, _y_prec), "S/ ", font=f_ps, fill=txt_c, anchor="lm"); draw.text((px + draw.textlength("S/ ", font=f_ps) + 15, _y_prec), precio_val, font=f_pv, fill=txt_c, anchor="lm")
+                draw.text((cx + D("precio_dx"), ny + 100 + D("precio_dy")), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
             else:
                 # Sin precio: el SKU sube y queda pegado al nombre
                 draw.text((cx, ny + GAP_SKU_SIN_PRECIO["DISPLAY"]), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 7); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold)
-            draw.text((40, 480), tit_legal, font=f_l_bold, fill=txt_c)
-            draw_justified_text(draw, cuerpo_legal, f_l, y_start=480, x_start=40, x_end=960, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
+            draw.text((40, 480 + D("legales_dy")), tit_legal, font=f_l_bold, fill=txt_c)
+            draw_justified_text(draw, cuerpo_legal, f_l, y_start=480 + D("legales_dy"), x_start=40, x_end=960, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "STORY":
-            pi = pi.resize((845, 845), Image.Resampling.LANCZOS); img.paste(pi, (140, 630), pi); cx_textos, anchor_y_textos = 150, 1482
+            # AJUSTE: foto centrada en el lienzo real y subida 50px para despegarla del texto
+            pi = pi.resize((845, 845), Image.Resampling.LANCZOS)
+            img.paste(pi, ((1080 - pi.width) // 2 + D("img_dx"), 640 + D("img_dy")), pi)   # antes (140, 690) -> centro caía en x=562
+            cx_textos, anchor_y_textos = STORY_MARGEN + D("txt_dx"), 1542 + D("txt_dy")
             draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt"); ny = anchor_y_textos + 65
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22 if hay_precio else 34)[:2]
             for l in lineas_nombre: draw.text((cx_textos, ny), l, font=f_p, fill=txt_c, anchor="lt"); ny += 40
             if hay_precio:
-                anchor_y_precio, p_v, espacio_entre_simbolo = 1540, precio_val, 20
-                tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo; px_bloque_completo = 810 - tw//2
+                anchor_y_precio, p_v, espacio_entre_simbolo = 1600 + D("precio_dy"), precio_val, 20
+                tw = draw.textlength("S/", font=f_ps) + draw.textlength(p_v, font=f_pv) + espacio_entre_simbolo
+                # AJUSTE: el bloque de precio cierra en el margen derecho, espejo del texto de la izquierda
+                px_bloque_completo = (1080 - STORY_MARGEN) - tw + D("precio_dx")   # antes: 810 - tw//2
+                cx_precio = px_bloque_completo + tw // 2
                 draw.text((px_bloque_completo, anchor_y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_bloque_completo + draw.textlength("S/", font=f_ps) + espacio_entre_simbolo; draw.text((px_numero, anchor_y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls")
-                draw.text((810, anchor_y_precio + 40), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
+                draw.text((cx_precio, anchor_y_precio + 40), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")  # AJUSTE: sigue al bloque, antes fijo en 810
             else:
                 # Sin precio: 1 sola columna, SKU debajo del nombre
                 draw.text((cx_textos, ny + GAP_SKU_SIN_PRECIO["STORY"]), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="lt")
-            f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 12); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((65, 1797), tit_legal, font=f_l_bold, fill=txt_c)
-            draw_justified_text(draw, cuerpo_legal, f_l, y_start=1797, x_start=65, x_end=1015, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
+            f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 12); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((65, 1797 + D("legales_dy")), tit_legal, font=f_l_bold, fill=txt_c)
+            draw_justified_text(draw, cuerpo_legal, f_l, y_start=1797 + D("legales_dy"), x_start=65, x_end=1015, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "PPL":
-            pi.thumbnail((779, 598), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2; py_posicion = 240; img.paste(pi, (px_centrado, py_posicion), pi); y_base_alineacion, y_precio = 850, 865
+            pi.thumbnail((779, 598), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2
+            py_posicion = 210 + D("img_dy")  # AJUSTE: sube la foto del producto (antes 240)
+            img.paste(pi, (px_centrado + D("img_dx"), py_posicion), pi); y_base_alineacion, y_precio = 850 + D("txt_dy"), 865 + D("precio_dy")
             if hay_precio:
                 p_v, w_simbolo, w_monto, espacio_interno = precio_val, draw.textlength("S/", font=f_ps), draw.textlength(precio_val, font=f_pv), 15
-                tw_precio = w_simbolo + w_monto + espacio_interno; eje_x_derecha = 820; px_inicio_bloque = eje_x_derecha - tw_precio // 2
+                tw_precio = w_simbolo + w_monto + espacio_interno; eje_x_derecha = 820 + D("precio_dx"); px_inicio_bloque = eje_x_derecha - tw_precio // 2
                 draw.text((px_inicio_bloque, y_precio), "S/", font=f_ps, fill=txt_c, anchor="ls"); px_numero = px_inicio_bloque + w_simbolo + espacio_interno; draw.text((px_numero, y_precio), p_v, font=f_pv, fill=txt_c, anchor="ls"); draw.text((eje_x_derecha, y_precio + 30), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="mt")
-            cx = 200; draw.text((cx, y_base_alineacion), row['Marca'], font=f_m, fill=txt_c, anchor="ls"); ny = y_base_alineacion + 10
+            cx = 200 + D("txt_dx"); draw.text((cx, y_base_alineacion), row['Marca'], font=f_m, fill=txt_c, anchor="ls"); ny = y_base_alineacion + 10
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=25 if hay_precio else 40)[:2]
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="lt"); ny += 30
             if not hay_precio:
                 # Sin precio: 1 sola columna, SKU debajo del nombre
                 draw.text((cx, ny + GAP_SKU_SIN_PRECIO["PPL"]), str(row['SKU']), font=f_s_ind, fill=txt_c, anchor="lt")
-            f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 11); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((50, 985), tit_legal, font=f_l_bold, fill=txt_c)
-            draw_justified_text(draw, cuerpo_legal, f_l, y_start=985, x_start=50, x_end=1030, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
+            f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 11); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((50, 985 + D("legales_dy")), tit_legal, font=f_l_bold, fill=txt_c)
+            draw_justified_text(draw, cuerpo_legal, f_l, y_start=985 + D("legales_dy"), x_start=50, x_end=1030, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
 
     sku_limpio = str(row['SKU'] or row['ID_Flyer']).replace("/", "-").replace("\\", "-")
     fname = f"{sku_limpio}_{formato}_{color_version}.jpg"
-    img.save(f"output/{fname}", quality=95); return f"{RAW_URL}{fname}"
+    img.save(f"output/{fname}", quality=100, subsampling=0); return f"{RAW_URL}{fname}"
+
+def resolver_columna(df, nombre_buscado):
+    """Devuelve el nombre REAL de la columna en df que coincide con nombre_buscado
+    ignorando mayúsculas/minúsculas y espacios extra. None si no existe ninguna."""
+    objetivo = nombre_buscado.strip().lower()
+    for c in df.columns:
+        if c.strip().lower() == objetivo:
+            return c
+    return None
 
 # --- BUCLE DE EJECUCIÓN PRINCIPAL ---
 data, res_sheet, viejos = get_sheets_data()
+
+# FIX: cada script solo debe procesar sus propias filas, nunca las de la otra marca
+col_tienda = resolver_columna(data, 'Tienda')
+if col_tienda is None:
+    print(f"❌ No se encontró una columna 'Tienda' en Hoja 1. Columnas disponibles: {list(data.columns)}")
+    raise SystemExit(1)
+data = data[data[col_tienda].astype(str).str.strip().str.upper() == 'LC'].reset_index(drop=True)
+
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 archivos_generados = 0
 filas_para_google = []
 
-print(f"DEBUG: Filas detectadas en el Excel: {len(data)}")
+print(f"DEBUG: Filas LC detectadas (columna real: '{col_tienda}'): {len(data)}")
 
 for idx, row in data.iterrows():
     f_v = str(row['Formato']).upper().strip()
     if f_v in ["FLYER", "", "0"]: continue
 
+    tipo_camp = str(row['Tipo de diseño']).strip().upper()
     # AJUSTE: el fondo AZUL se retira. Todas las piezas salen solo en AMARILLO.
     versiones = ["AMARILLO"]
     for c in versiones:
@@ -333,34 +435,32 @@ for idx, row in data.iterrows():
             print(f"🎨 Generando pieza nueva: {llave}")
             url = generar_diseno(row, c)
             if url:
-                # AJUSTE: se agrega al final el link de redireccion del SKU sacado del feed
-                lw = link_web(TIENDA_FEED, row['SKU'])
                 # AJUSTE: se agrega TIENDA_SCRIPT en la posicion 3 (columna C).
-                # Antes se mandaban 6 valores y todo quedaba corrido una columna a la izquierda.
+                # Antes se mandaban 6 valores y todo quedaba corrido una columna a la
+                # izquierda, por eso habia que escribir "LC" a mano en el Sheet.
+                # AJUSTE: columna H 'Link web' con el link del feed segun el SKU.
+                # Orden: Fecha | ID | Tienda | Diseño | Formato | Color | Link Imagen | Link web
+                lw = link_web(TIENDA_SCRIPT, row['SKU'])
                 filas_para_google.append([h_lima, llave, TIENDA_SCRIPT, row['Tipo de diseño'], f_v, c, url, lw])
                 archivos_generados += 1
 
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
-# CAMBIO: diagnostico de flyers (cuantas filas FLYER hay y como se agrupan)
-print(f"DEBUG: Filas FLYER: {len(fly_g)} | Grupos ID_Flyer: {fly_g['ID_Flyer'].astype(str).value_counts().to_dict()}")
 for id_f, group in fly_g.groupby('ID_Flyer'):
-    if str(id_f).strip() in ["0", "0.0", ""]: continue
+    if str(id_f) in ["0", "0.0", ""]: continue
+    tipo_camp = str(group.iloc[0]['Tipo de diseño']).strip().upper()
     # AJUSTE: el fondo AZUL se retira. Todos los flyers salen solo en AMARILLO.
     versiones = ["AMARILLO"]
     for c in versiones:
         llave = f"{id_f}_FLYER_{c}".upper()
-        if llave in viejos:
-            # CAMBIO: antes se saltaba en silencio
-            print(f"⏭️  Flyer {llave} ya existe en Resultados, no se regenera.")
-            continue
-        print(f"🎨 Generando Flyer nuevo: {llave}")
-        url = generar_diseno(group, c)
-        if url:
-            # AJUSTE: link web del flyer = link del primer SKU del grupo (ver FLYER_USA_PRIMER_SKU)
-            lw = link_web(TIENDA_FEED, group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
-            # AJUSTE: mismo fix de columna Tienda que en el ciclo de piezas individuales
-            filas_para_google.append([h_lima, llave, TIENDA_SCRIPT, group.iloc[0]['Tipo de diseño'], "FLYER", c, url, lw])
-            archivos_generados += 1
+        if llave not in viejos:
+            print(f"🎨 Generando Flyer nuevo: {llave}")
+            url = generar_diseno(group, c)
+            if url:
+                # AJUSTE: mismo fix de columna Tienda que en el ciclo de piezas individuales
+                # AJUSTE: link web del flyer = link del primer SKU del grupo (ver FLYER_USA_PRIMER_SKU)
+                lw = link_web(TIENDA_SCRIPT, group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
+                filas_para_google.append([h_lima, llave, TIENDA_SCRIPT, group.iloc[0]['Tipo de diseño'], "FLYER", c, url, lw])
+                archivos_generados += 1
 
 if filas_para_google:
     res_sheet.append_rows(filas_para_google)
