@@ -118,6 +118,18 @@ LAYOUT_EFERTON_EXTRA = {
 }
 
 # ======================================================================
+# FORZAR REGENERACION
+# ======================================================================
+# Normalmente una pieza se salta si ya esta en 'Resultados' Y su archivo existe
+# en output/. Cuando cambias las coordenadas de una campaña eso no basta: el
+# archivo viejo sigue ahi y la pieza nunca se vuelve a dibujar.
+# Pon aqui el "Tipo de diseño" (en MAYUSCULAS) para regenerarlo SIEMPRE.
+# Deja el set vacio ( set() ) cuando termines, o cada corrida rehara todo.
+FORZAR_REGENERAR = {
+    "EFERTON DE LA SEMANA",
+}
+
+# ======================================================================
 # AJUSTES POR CAMPAÑA  (mover elementos sin tocar el resto del codigo)
 # ======================================================================
 # La clave es el "Tipo de diseño" del Sheet, EN MAYUSCULAS.
@@ -654,11 +666,15 @@ if col_tienda is None:
 data = data[data[col_tienda].astype(str).str.strip().str.upper() == 'EFE'].reset_index(drop=True)
 print(f"DEBUG: Filas EFE detectadas (columna real: '{col_tienda}'): {len(data)}")
 
-def hay_que_generar(llave, nombre_archivo):
+def hay_que_generar(llave, nombre_archivo, tipo_camp=""):
     """True si la pieza falta: o no esta registrada en 'Resultados', o su archivo
-    ya no existe en output/ (p.ej. despues de una limpieza del repo).
+    ya no existe en output/ (p.ej. despues de una limpieza del repo), o su campaña
+    esta en FORZAR_REGENERAR.
     AJUSTE: antes solo miraba el Sheet, asi que si se borraban las imagenes el
     script las saltaba igual y todos los links quedaban en 404."""
+    if str(tipo_camp).strip().upper() in FORZAR_REGENERAR:
+        print(f"🔁 {llave}: campaña en FORZAR_REGENERAR, se vuelve a dibujar.")
+        return True
     if llave not in viejos:
         return True
     if not os.path.exists(os.path.join("output", nombre_archivo)):
@@ -679,7 +695,7 @@ for idx, row in data.iterrows():
     llave = f"{sku_val}_{f_v}_{tienda}_EFE".upper()
     archivo = f"{sku_val}_{f_v}_{tienda}.jpg"
     _era_nueva = llave not in viejos
-    if hay_que_generar(llave, archivo):
+    if hay_que_generar(llave, archivo, row['Tipo de diseño']):
         print(f"🎨 Generando: {llave}")
         url = generar_diseno(row)
         # Si la llave ya existia, solo se repone el archivo: la fila del Sheet
@@ -701,7 +717,7 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
     _sku_fly = str(group.iloc[0]['SKU'] or id_f).replace("/", "-").replace("\\", "-")
     archivo = f"{_sku_fly}_FLYER_EFE.jpg"
     _era_nueva = llave not in viejos
-    if hay_que_generar(llave, archivo):
+    if hay_que_generar(llave, archivo, group.iloc[0]['Tipo de diseño']):
         print(f"🎨 Generando Flyer: {llave}")
         url = generar_diseno(group)
         if url and _era_nueva:
