@@ -142,6 +142,17 @@ AJUSTES_CAMPANA = {
     # la columna "Tipo de diseño" del Sheet.
     "KV COMPUTO EFE":          _AJ_KV_COMPUTO_EFE,
     "EFERTON KV COMPUTO EFE":  _AJ_KV_COMPUTO_EFE,
+
+    "EFERTON DE LA SEMANA": {
+        "texto_color": None,
+        "PPL":     {"img_dx": 4, "img_dy": 80, "txt_dx": -18, "txt_dy": 94,
+                    "precio_dx": -12, "precio_dy": 110, "legales_dy": 44},
+        "STORY":   {"img_dx": -6, "img_dy": 146, "txt_dx": -7, "txt_dy": 128,
+                    "precio_dx": 24, "precio_dy": 141, "legales_dy": 19},
+        "DISPLAY": {"img_dx": 18, "img_dy": -2, "txt_dx": -5, "txt_dy": 50,
+                    "precio_dx": -5, "precio_dy": 64},
+        # FLYER sin calibrar: usa las coordenadas de siempre.
+    },
 }
 
 def resolver_carpeta_fondos(tienda, tipo):
