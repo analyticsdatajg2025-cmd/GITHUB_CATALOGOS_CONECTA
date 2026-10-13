@@ -125,7 +125,7 @@ STORY_MARGEN = 150
 AJUSTES_CAMPANA = {
     "KV COMPUTO LC": {
         "texto_color": None,
-        "PPL":     {"img_dx": -2, "img_dy": 199, "txt_dx": -145, "txt_dy": 65,
+        "PPL":     {"img_dx": -2, "img_dy": 169, "txt_dx": -145, "txt_dy": 65,
                     "precio_dx": 54, "precio_dy": 82, "legales_dy": 40},
         "DISPLAY": {"img_dx": -70, "img_dy": -1, "txt_dx": -86, "txt_dy": -4,
                     "precio_dx": -79},
