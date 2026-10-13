@@ -129,15 +129,46 @@ LAYOUT_EFERTON_EXTRA = {
 # Elementos por formato:
 #   PPL / STORY / DISPLAY: img_dx img_dy  txt_dx txt_dy  precio_dx precio_dy  legales_dy
 #   FLYER:                 fecha_dy  grid_dy  legales_dy
-AJUSTES_CAMPANA = {
-    "KV COMPUTO EFE": {
-        "texto_color": None,
-        "PPL":     {"img_dx": 2, "img_dy": -13, "txt_dx": -11, "txt_dy": 40,
-                    "precio_dx": -11, "precio_dy": 59},
-        "DISPLAY": {"txt_dy": -6, "precio_dy": 11},
-        # STORY y FLYER sin calibrar: usan las coordenadas de siempre.
-    },
+_AJ_KV_COMPUTO_EFE = {
+    "texto_color": None,
+    "PPL":     {"img_dx": 2, "img_dy": -13, "txt_dx": -11, "txt_dy": 40,
+                "precio_dx": -11, "precio_dy": 59},
+    "DISPLAY": {"txt_dy": -6, "precio_dy": 11},
+    # STORY y FLYER sin calibrar: usan las coordenadas de siempre.
 }
+
+AJUSTES_CAMPANA = {
+    # Se registra con los dos nombres posibles para que funcione diga lo que diga
+    # la columna "Tipo de diseño" del Sheet.
+    "KV COMPUTO EFE":          _AJ_KV_COMPUTO_EFE,
+    "EFERTON KV COMPUTO EFE":  _AJ_KV_COMPUTO_EFE,
+}
+
+def resolver_carpeta_fondos(tienda, tipo):
+    """Devuelve la carpeta de fondos de esa campaña.
+
+    AJUSTE: antes exigia que la carpeta se llamara EXACTAMENTE igual que el
+    'Tipo de diseño' del Sheet. Si la carpeta lleva un prefijo (por ejemplo
+    'EFERTON KV COMPUTO EFE' cuando el Sheet dice 'KV COMPUTO EFE'), no la
+    encontraba y la campaña entera se perdia en silencio. Ahora, si no hay
+    coincidencia exacta, busca una subcarpeta que contenga ese nombre."""
+    base = os.path.join("FONDOS", tienda)
+    exacta = os.path.join(base, tipo)
+    if os.path.isdir(exacta):
+        return exacta
+    try:
+        candidatas = [d for d in sorted(os.listdir(base))
+                      if os.path.isdir(os.path.join(base, d)) and tipo in d.strip().upper()]
+    except OSError:
+        candidatas = []
+    if len(candidatas) == 1:
+        print(f"ℹ️  Carpeta de fondos resuelta por coincidencia: '{candidatas[0]}' para el tipo '{tipo}'.")
+        return os.path.join(base, candidatas[0])
+    if len(candidatas) > 1:
+        print(f"⚠️  Hay {len(candidatas)} carpetas que coinciden con '{tipo}' en '{base}': {candidatas}. "
+              f"Se usa '{candidatas[0]}'; renombra para dejar una sola.")
+        return os.path.join(base, candidatas[0])
+    return exacta
 
 def normalizar_lienzo(img, formato, ruta_fondo):
     """Fuerza el fondo a la medida oficial del formato. Devuelve la imagen lista."""
@@ -326,7 +357,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         precio_val = "{:,}".format(int(float(row['Precio desc'])))
     except:
         precio_val = str(row['Precio desc'])
-    path_fonts, path_fondos = f"TIPOGRAFIA/{tienda}", f"FONDOS/{tienda}/{tipo}"
+    path_fonts = f"TIPOGRAFIA/{tienda}"
+    path_fondos = resolver_carpeta_fondos(tienda, tipo)  # AJUSTE: tolera prefijos en el nombre de la carpeta
     f_names = [f"{tienda} - {tipo} - {formato}", f"{tienda} - REPOWER {tipo} - {formato}"]
     # AJUSTE: se agregan .jpeg/.JPEG. Los flyers estaban exportados en .jpeg y no entraban
     # en la busqueda, asi que generar_diseno devolvia None y el flyer se perdia en silencio.
