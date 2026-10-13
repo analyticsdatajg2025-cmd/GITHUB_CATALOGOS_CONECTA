@@ -127,6 +127,8 @@ LAYOUT_EFERTON_EXTRA = {
 # Deja el set vacio ( set() ) cuando termines, o cada corrida rehara todo.
 FORZAR_REGENERAR = {
     "EFERTON DE LA SEMANA",
+    "KV COMPUTO EFE",
+    "PRECIO IRRESISTIBLE",
 }
 
 # ======================================================================
@@ -144,9 +146,17 @@ FORZAR_REGENERAR = {
 _AJ_KV_COMPUTO_EFE = {
     "texto_color": None,
     "PPL":     {"img_dx": 2, "img_dy": -13, "txt_dx": -11, "txt_dy": 40,
-                "precio_dx": -11, "precio_dy": 59},
+                "precio_dx": -11, "precio_dy": 59,
+                "marca_dx": 120},   # acerca "HP" al nombre del producto
     "DISPLAY": {"txt_dy": -6, "precio_dy": 11},
     # STORY y FLYER sin calibrar: usan las coordenadas de siempre.
+}
+
+_AJ_PRECIO_IRRESISTIBLE = {
+    "texto_color": None,
+    "PPL": {"img_dx": -2, "img_dy": 14, "txt_dx": -73, "txt_dy": -8,
+            "precio_dx": -75, "precio_dy": 21, "legales_dy": 9},
+    # STORY, DISPLAY y FLYER sin calibrar: usan las coordenadas de siempre.
 }
 
 AJUSTES_CAMPANA = {
@@ -154,6 +164,9 @@ AJUSTES_CAMPANA = {
     # la columna "Tipo de diseño" del Sheet.
     "KV COMPUTO EFE":          _AJ_KV_COMPUTO_EFE,
     "EFERTON KV COMPUTO EFE":  _AJ_KV_COMPUTO_EFE,
+
+    "PRECIO IRRESISTIBLE":     _AJ_PRECIO_IRRESISTIBLE,
+    "PRECIO IRRESISTIBLE EFE": _AJ_PRECIO_IRRESISTIBLE,
 
     "EFERTON DE LA SEMANA": {
         "texto_color": None,
@@ -375,6 +388,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     _camp = AJUSTES_CAMPANA.get(tipo, {})
     def D(clave):
         return _camp.get(formato, {}).get(clave, 0)
+    # AJUSTE: 'img_escala' achica/agranda la foto (1.0 = original).
+    # 'marca_dx'/'marca_dy' mueven SOLO la marca, sin arrastrar nombre ni SKU.
+    _esc = float(_camp.get(formato, {}).get("img_escala", 1.0))
 
     try:
         precio_val = "{:,}".format(int(float(row['Precio desc'])))
@@ -491,14 +507,14 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         es_aniv = "ANIVERSARIO" in tipo
         if es_eferton or es_aniv:
             if formato == "PPL":
-                pi.thumbnail((647, 670), Image.Resampling.LANCZOS)
+                pi.thumbnail((int(647*_esc), int(670*_esc)), Image.Resampling.LANCZOS)
                 px_img = 277 if es_aniv else 217  # AJUSTE: producto centrado en versión EFERTON (antes 156)
                 img.paste(pi, (px_img + D("img_dx"), 183 + D("img_dy")), pi)  # AJUSTE: sube más para centralizar (antes 223; original 243)
 
                 f_marca_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30)
-                mx = ((1080 - PPL_MARGEN_X) if es_aniv else 120) + D("txt_dx")  # AJUSTE: marca pegada al margen izquierdo (antes 250)
+                mx = ((1080 - PPL_MARGEN_X) if es_aniv else 120) + D("txt_dx") + D("marca_dx")  # AJUSTE: marca pegada al margen izquierdo (antes 250)
                 m_anchor = "rs" if es_aniv else "ls"
-                draw.text((mx, 870 + D("txt_dy")), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor=m_anchor)
+                draw.text((mx, 870 + D("txt_dy") + D("marca_dy")), row['Marca'], font=f_marca_ppl, fill=(255,255,255), anchor=m_anchor)
 
                 f_nom_ppl = ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 25)
                 if hay_precio:
@@ -544,7 +560,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
             elif formato == "STORY":
                 # AJUSTE: foto centrada en el lienzo real (antes fija en x=72, centro caía en 550)
-                pi.thumbnail((956, 956), Image.Resampling.LANCZOS)
+                pi.thumbnail((int(956*_esc), int(956*_esc)), Image.Resampling.LANCZOS)
                 img.paste(pi, ((1080 - pi.width) // 2 + D("img_dx"), 526 + D("img_dy")), pi)
 
                 # AJUSTE: preciador un poco más chico para que quepa espejado sin pisar el nombre
@@ -585,7 +601,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 px_img = (180 if es_aniv else 420) + D("img_dx")  # AJUSTE: producto un poco más a la izquierda (antes 440)
                 cx = (820 if es_aniv else 240) + D("txt_dx")       # AJUSTE: texto un poco más a la izquierda (antes 260)
 
-                pi.thumbnail((460, 460), Image.Resampling.LANCZOS); img.paste(pi, (px_img, 25 + D("img_dy")), pi)
+                pi.thumbnail((int(460*_esc), int(460*_esc)), Image.Resampling.LANCZOS); img.paste(pi, (px_img, 25 + D("img_dy")), pi)
                 draw.text((cx, 200 + D("txt_dy")), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")  # AJUSTE: sube más (antes 230; original 250)
                 ny = 240 + D("txt_dy")  # AJUSTE: sube más (antes 270; original 290)
                 for line in textwrap.wrap(str(row['Nombre del producto']), width=20)[:2]:
@@ -601,7 +617,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), f_l, (485 if hay_precio else 480) + D("legales_dy"), 40, 960, (255,255,255), force_justify=True)
         else:
             if formato == "PPL":
-                pi.thumbnail((682, 682), Image.Resampling.LANCZOS); img.paste(pi, (310 + D("img_dx"), 287 + D("img_dy")), pi)
+                pi.thumbnail((int(682*_esc), int(682*_esc)), Image.Resampling.LANCZOS); img.paste(pi, (310 + D("img_dx"), 287 + D("img_dy")), pi)
                 _lx = 91 + D("txt_dx")
                 draw.text((_lx, 639 + D("txt_dy")), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
                 lines = textwrap.wrap(row['Nombre del producto'], width=13); ny = 675 + D("txt_dy")
@@ -614,7 +630,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     draw.text((_px + draw.textlength("S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 44)) + 10, py), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 80), fill=(255,255,255), anchor="ls")
                 draw_justified_text(draw, str(row['Legales']), f_l, 998 + D("legales_dy"), 73, 1007, (255,255,255), force_justify=True)
             elif formato == "STORY":
-                pi.thumbnail((935, 935), Image.Resampling.LANCZOS); img.paste(pi, (78 + D("img_dx"), 580 + D("img_dy")), pi)
+                pi.thumbnail((int(935*_esc), int(935*_esc)), Image.Resampling.LANCZOS); img.paste(pi, (78 + D("img_dx"), 580 + D("img_dy")), pi)
                 # Sin precio: 1 sola columna, el bloque se centra
                 lx = (147 if hay_precio else STORY_X_SIN_PRECIO) + D("txt_dx")
                 anchor_txt = "ls" if hay_precio else "ms"
@@ -628,7 +644,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     draw.text((_px + draw.textlength("S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 71)) + 15, py_irr), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 128), fill=(255,255,255), anchor="ls")
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800 + D("legales_dy"), 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
             elif formato == "DISPLAY":
-                pi.thumbnail((485, 465), Image.Resampling.LANCZOS); img.paste(pi, (412 + D("img_dx"), 24 + D("img_dy")), pi); lx = 91 + D("txt_dx")
+                pi.thumbnail((int(485*_esc), int(465*_esc)), Image.Resampling.LANCZOS); img.paste(pi, (412 + D("img_dx"), 24 + D("img_dy")), pi); lx = 91 + D("txt_dx")
                 draw.text((lx, 219 + D("txt_dy")), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
                 ny = 255 + D("txt_dy")
                 for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((lx, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 25
