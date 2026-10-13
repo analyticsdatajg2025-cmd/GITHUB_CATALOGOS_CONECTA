@@ -121,17 +121,43 @@ STORY_MARGEN = 150
 #   PPL / STORY / DISPLAY: img_dx img_dy  txt_dx txt_dy  precio_dx precio_dy  legales_dy
 #   FLYER:                 fecha_dy  grid_dy  legales_dy
 #
+#   img_escala -> factor de tamaño de la foto del producto (1.0 = igual que siempre,
+#                 0.85 = 15% mas chica). Solo en PPL/STORY/DISPLAY.
+#
 # "texto_color" fuerza el color del texto. None = automatico segun el fondo.
 AJUSTES_CAMPANA = {
+    "DSCTOS POWER": {
+        "texto_color": None,
+        # Baja la foto, la marca/nombre y el precio. Los legales NO se mueven.
+        "PPL": {"img_dy": 30, "txt_dy": 30, "precio_dy": 30},
+    },
     "KV COMPUTO LC": {
         "texto_color": None,
-        "PPL":     {"img_dx": -2, "img_dy": 169, "txt_dx": -145, "txt_dy": 65,
-                    "precio_dx": 54, "precio_dy": 82, "legales_dy": 40},
+        "PPL":     {"img_escala": 0.85, "img_dx": -2, "img_dy": 169, "txt_dx": -105, "txt_dy": 65,
+                    "precio_dx": 14, "precio_dy": 82, "legales_dy": 40},
         "DISPLAY": {"img_dx": -70, "img_dy": -1, "txt_dx": -86, "txt_dy": -4,
                     "precio_dx": -79},
         "FLYER":   {"fecha_dy": 65, "grid_dy": 35, "legales_dy": 10},
         # STORY sin calibrar: usa las coordenadas de siempre.
     },
+    "DSCTOS POWER": {
+        "texto_color": None,
+        # Bajan la foto, la marca y el precio. Los legales NO se mueven.
+        "PPL":     {"img_dy": 25, "txt_dy": 25, "precio_dy": 25},
+    },
+}
+
+# ======================================================================
+# FORZAR REGENERACION
+# ======================================================================
+# Normalmente una pieza se salta si ya esta en 'Resultados' Y su archivo existe
+# en output/. Cuando cambias las coordenadas de una campaña eso no basta: el
+# archivo viejo sigue ahi y la pieza nunca se vuelve a dibujar.
+# Pon aqui el "Tipo de diseño" (en MAYUSCULAS) para regenerarlo SIEMPRE.
+# Deja el set vacio ( set() ) cuando termines, o cada corrida rehara todo.
+FORZAR_REGENERAR = {
+    "KV COMPUTO LC",
+    "DSCTOS POWER",
 }
 
 def normalizar_lienzo(img, formato, ruta_fondo):
@@ -239,6 +265,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     _camp = AJUSTES_CAMPANA.get(tipo.strip().upper(), {})
     def D(clave):
         return _camp.get(formato, {}).get(clave, 0)
+    # AJUSTE: 'img_escala' achica o agranda la foto del producto. 1.0 = tamaño original,
+    # 0.85 = 15% mas chica. No mueve nada mas; el resto sigue con sus dx/dy.
+    _esc = float(_camp.get(formato, {}).get("img_escala", 1.0))
     if _camp.get("texto_color"):
         txt_c = tuple(_camp["texto_color"])
 
@@ -338,7 +367,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         # Otros formatos mantienen txt_c (Amarillo/Blanco según versión)
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         if formato == "DISPLAY":
-            pi.thumbnail((483, 483), Image.Resampling.LANCZOS); img.paste(pi, (423 + D("img_dx"), 25 + D("img_dy")), pi); cx, ny = 255 + D("txt_dx"), 245 + D("txt_dy")
+            _esc = D("img_escala") or 1.0  # AJUSTE: factor de tamaño de la foto
+            pi.thumbnail((int(483 * _esc), int(483 * _esc)), Image.Resampling.LANCZOS); img.paste(pi, (423 + D("img_dx"), 25 + D("img_dy")), pi); cx, ny = 255 + D("txt_dx"), 245 + D("txt_dy")
             draw.text((cx, 195 + D("txt_dy")), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 27
@@ -366,7 +396,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=480 + D("legales_dy"), x_start=40, x_end=960, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "STORY":
             # AJUSTE: foto centrada en el lienzo real y subida 50px para despegarla del texto
-            pi = pi.resize((845, 845), Image.Resampling.LANCZOS)
+            _esc = D("img_escala") or 1.0  # AJUSTE: factor de tamaño de la foto
+            pi = pi.resize((int(845 * _esc), int(845 * _esc)), Image.Resampling.LANCZOS)
             img.paste(pi, ((1080 - pi.width) // 2 + D("img_dx"), 640 + D("img_dy")), pi)   # antes (140, 690) -> centro caía en x=562
             cx_textos, anchor_y_textos = STORY_MARGEN + D("txt_dx"), 1542 + D("txt_dy")
             draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt"); ny = anchor_y_textos + 65
@@ -386,7 +417,8 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             f_l_bold = ImageFont.truetype(f"{path_fonts}/HurmeGeometricSans1 Bold.otf", 12); tit_legal = "CONDICIONES GENERALES: "; cuerpo_legal = str(row['Legales']); ancho_negrita = draw.textlength(tit_legal, font=f_l_bold); draw.text((65, 1797 + D("legales_dy")), tit_legal, font=f_l_bold, fill=txt_c)
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=1797 + D("legales_dy"), x_start=65, x_end=1015, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "PPL":
-            pi.thumbnail((779, 598), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2
+            _esc = D("img_escala") or 1.0  # AJUSTE: factor de tamaño de la foto
+            pi.thumbnail((int(779 * _esc), int(598 * _esc)), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2
             py_posicion = 210 + D("img_dy")  # AJUSTE: sube la foto del producto (antes 240)
             img.paste(pi, (px_centrado + D("img_dx"), py_posicion), pi); y_base_alineacion, y_precio = 850 + D("txt_dy"), 865 + D("precio_dy")
             if hay_precio:
@@ -432,11 +464,15 @@ filas_para_google = []
 
 print(f"DEBUG: Filas LC detectadas (columna real: '{col_tienda}'): {len(data)}")
 
-def hay_que_generar(llave, nombre_archivo):
+def hay_que_generar(llave, nombre_archivo, tipo_camp=""):
     """True si la pieza falta: o no esta registrada en 'Resultados', o su archivo
-    ya no existe en output/ (p.ej. despues de una limpieza del repo).
+    ya no existe en output/ (p.ej. despues de una limpieza del repo), o su campaña
+    esta en FORZAR_REGENERAR.
     AJUSTE: antes solo miraba el Sheet, asi que si se borraban las imagenes el
     script las saltaba igual y todos los links quedaban en 404."""
+    if str(tipo_camp).strip().upper() in FORZAR_REGENERAR:
+        print(f"🔁 {llave}: campaña en FORZAR_REGENERAR, se vuelve a dibujar.")
+        return True
     if llave not in viejos:
         return True
     if not os.path.exists(os.path.join("output", nombre_archivo)):
@@ -456,7 +492,7 @@ for idx, row in data.iterrows():
         llave = f"{sku_val}_{f_v}_{c}".upper()
         archivo = f"{sku_val}_{f_v}_{c}.jpg"
         _era_nueva = llave not in viejos
-        if hay_que_generar(llave, archivo):
+        if hay_que_generar(llave, archivo, row['Tipo de diseño']):
             print(f"🎨 Generando pieza: {llave}")
             url = generar_diseno(row, c)
             # Si la llave ya existia, solo se repone el archivo: la fila del Sheet
@@ -484,7 +520,7 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
         _sku_fly = str(group.iloc[0]['SKU'] or id_f).replace("/", "-").replace("\\", "-")
         archivo = f"{_sku_fly}_FLYER_{c}.jpg"
         _era_nueva = llave not in viejos
-        if hay_que_generar(llave, archivo):
+        if hay_que_generar(llave, archivo, group.iloc[0]['Tipo de diseño']):
             print(f"🎨 Generando Flyer: {llave}")
             url = generar_diseno(group, c)
             if url and _era_nueva:
