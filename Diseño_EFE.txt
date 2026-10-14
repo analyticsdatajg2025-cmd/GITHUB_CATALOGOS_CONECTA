@@ -154,9 +154,12 @@ _AJ_KV_COMPUTO_EFE = {
 
 _AJ_PRECIO_IRRESISTIBLE = {
     "texto_color": None,
-    "PPL": {"img_dx": -2, "img_dy": 14, "txt_dx": -73, "txt_dy": -8,
-            "precio_dx": -75, "precio_dy": 21, "legales_dy": 9},
-    # STORY, DISPLAY y FLYER sin calibrar: usan las coordenadas de siempre.
+    "PPL":     {"img_dx": 11, "img_dy": 18, "txt_dx": -70, "txt_dy": -9,
+                "precio_dx": -61, "precio_dy": 20, "legales_dy": 9},
+    "STORY":   {"img_dx": 6, "img_dy": 2, "txt_dx": -38, "txt_dy": 20,
+                "precio_dx": 12, "precio_dy": 38},
+    "DISPLAY": {"img_dy": 6, "precio_dy": 4},
+    # FLYER sin calibrar: usa las coordenadas de siempre.
 }
 
 AJUSTES_CAMPANA = {
