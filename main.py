@@ -31,8 +31,19 @@ FLYER_USA_PRIMER_SKU = True
 
 _feed_cache = {}
 
+# Cabeceras de navegador: algunos servidores (WAF / Cloudflare) devuelven 403 o una
+# pagina HTML cuando la descarga viene de 'python-requests' desde GitHub Actions.
+_FEED_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    "Accept": "text/plain,text/csv,*/*;q=0.8",
+}
+_skus_sin_feed = {}
+
 def cargar_feed(tienda):
-    """Descarga el feed de la tienda y devuelve {SKU_MAYUSCULAS: link}. Cachea por corrida."""
+    """Descarga el feed de la tienda y devuelve {SKU_MAYUSCULAS: link}. Cachea por corrida.
+    AJUSTE: cabeceras de navegador, 3 reintentos y diagnostico en el log, para saber
+    si el problema es la descarga o que el SKU no esta en el feed."""
     tienda = str(tienda).strip().upper()
     if tienda in _feed_cache:
         return _feed_cache[tienda]
@@ -44,35 +55,50 @@ def cargar_feed(tienda):
         _feed_cache[tienda] = mapa
         return mapa
 
-    try:
-        r = requests.get(url, timeout=60)
-        r.raise_for_status()
+    ultimo_error = None
+    for intento in range(1, 4):
         try:
-            texto = r.content.decode("utf-8")
-        except UnicodeDecodeError:
-            texto = r.content.decode("latin-1")
+            r = requests.get(url, timeout=90, headers=_FEED_HEADERS)
+            print(f"🌐 Feed {tienda} intento {intento}: HTTP {r.status_code}, "
+                  f"{len(r.content)} bytes, tipo '{r.headers.get('Content-Type', '?')}'")
+            r.raise_for_status()
+            try:
+                texto = r.content.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                texto = r.content.decode("latin-1")
 
-        lineas = texto.splitlines()
-        if not lineas:
-            raise ValueError("el feed vino vacio")
+            lineas = texto.splitlines()
+            if not lineas:
+                raise ValueError("el feed vino vacio")
+            if lineas[0].lstrip().startswith("<"):
+                raise ValueError(f"el servidor devolvio HTML en vez del feed: {lineas[0][:120]!r}")
 
-        cab = [c.strip().lower() for c in lineas[0].split("\t")]
-        i_id, i_link = cab.index("id"), cab.index("link")
+            sep = "\t" if "\t" in lineas[0] else ("|" if "|" in lineas[0] else ",")
+            cab = [c.strip().strip('"').lower() for c in lineas[0].split(sep)]
+            if "id" not in cab or "link" not in cab:
+                raise ValueError(f"no encuentro las columnas 'id' y 'link'. Cabecera: {cab[:8]}")
+            i_id, i_link = cab.index("id"), cab.index("link")
 
-        for ln in lineas[1:]:
-            if not ln.strip():
-                continue
-            campos = ln.split("\t")
-            if len(campos) <= max(i_id, i_link):
-                continue  # fila truncada: se ignora
-            sku_feed = campos[i_id].strip().upper()
-            link_feed = campos[i_link].strip()
-            if sku_feed and link_feed:
-                mapa[sku_feed] = link_feed
+            for ln in lineas[1:]:
+                if not ln.strip():
+                    continue
+                campos = ln.split(sep)
+                if len(campos) <= max(i_id, i_link):
+                    continue  # fila truncada: se ignora
+                sku_feed = campos[i_id].strip().strip('"').upper()
+                link_feed = campos[i_link].strip().strip('"')
+                if sku_feed and link_feed:
+                    mapa[sku_feed] = link_feed
 
-        print(f"✅ Feed {tienda}: {len(mapa)} SKUs cargados desde {url}")
-    except Exception as e:
-        print(f"⚠️  No se pudo leer el feed de {tienda} ({url}): {e}. "
+            print(f"✅ Feed {tienda}: {len(mapa)} SKUs cargados desde {url}. "
+                  f"Ejemplos: {list(mapa)[:3]}")
+            break
+        except Exception as e:
+            ultimo_error = e
+            mapa = {}
+            print(f"⚠️  Feed {tienda} intento {intento} fallo: {e}")
+    else:
+        print(f"❌ No se pudo leer el feed de {tienda} ({url}) tras 3 intentos: {ultimo_error}. "
               f"Todos los links web quedaran como '{TEXTO_SIN_FEED}'.")
 
     _feed_cache[tienda] = mapa
@@ -85,7 +111,13 @@ def link_web(tienda, sku):
     clave = str(sku).strip().upper()
     if not clave or clave in ("NAN", "NONE"):
         return TEXTO_SIN_FEED
-    return cargar_feed(tienda).get(clave, TEXTO_SIN_FEED)
+    mapa = cargar_feed(tienda)
+    if clave in mapa:
+        return mapa[clave]
+    # AJUSTE: se anota para el resumen del final de la corrida
+    if mapa:
+        _skus_sin_feed.setdefault(str(tienda).strip().upper(), set()).add(clave)
+    return TEXTO_SIN_FEED
 
 # --- AJUSTES PARA PIEZAS SIN PRECIO ---
 STORY_X_SIN_PRECIO = 540   # centro del bloque de texto en STORY al pasar a 1 columna
@@ -154,8 +186,8 @@ _AJ_KV_COMPUTO_EFE = {
 
 _AJ_PRECIO_IRRESISTIBLE = {
     "texto_color": None,
-    "PPL":     {"img_dx": 11, "img_dy": 18, "txt_dx": -70, "txt_dy": -9,
-                "precio_dx": -61, "precio_dy": 20, "legales_dy": 9},
+    "PPL":     {"img_dx": 11, "img_dy": 18, "txt_dx": -42, "txt_dy": -88,
+                "precio_dx": -41, "precio_dy": 20, "legales_dy": 9},
     "STORY":   {"img_dx": 6, "img_dy": 2, "txt_dx": -38, "txt_dy": 20,
                 "precio_dx": 12, "precio_dy": 38},
     "DISPLAY": {"img_dy": 6, "precio_dy": 4},
@@ -743,6 +775,10 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
             # AJUSTE: link web del flyer = link del primer SKU del grupo (ver FLYER_USA_PRIMER_SKU)
             lw = link_web("EFE", group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
             filas_para_google.append([h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url, lw])
+
+# --- RESUMEN DEL FEED ---
+for _t, _skus in _skus_sin_feed.items():
+    print(f"🔎 {len(_skus)} SKU(s) NO estan en el feed {_t}: {sorted(_skus)}")
 
 # --- ESCRITURA FINAL MASIVA (SOLO 1 PETICIÓN) ---
 if filas_para_google:
