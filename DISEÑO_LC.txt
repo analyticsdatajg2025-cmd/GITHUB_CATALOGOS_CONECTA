@@ -145,6 +145,14 @@ AJUSTES_CAMPANA = {
         # Bajan la foto, la marca y el precio. Los legales NO se mueven.
         "PPL":     {"img_dy": 25, "txt_dy": 25, "precio_dy": 25},
     },
+    "CYBER WEEK": {
+        "texto_color": None,
+        "PPL":   {"img_dx": 14, "img_dy": 37, "txt_dx": -35, "txt_dy": 33,
+                  "precio_dx": -21, "precio_dy": 57, "legales_dy": 25},
+        "STORY": {"img_dy": -66, "txt_dy": -49, "precio_dy": 7},
+        "FLYER": {"fecha_dy": 69, "grid_dy": 24, "legales_dy": 14},
+        # DISPLAY sin calibrar: usa las coordenadas de siempre.
+    },
 }
 
 # ======================================================================
