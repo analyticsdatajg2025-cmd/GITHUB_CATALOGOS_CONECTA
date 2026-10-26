@@ -115,6 +115,7 @@ PPL_MARGEN_X = 90    # margen lateral del PPL, alineado con el de los legales
 # coordenadas distintas. Agregala aqui (en MAYUSCULAS) para que use EFERTON.
 LAYOUT_EFERTON_EXTRA = {
     "KV COMPUTO EFE",
+    "CYBER WEEK",
 }
 
 # ======================================================================
