@@ -5,7 +5,7 @@ import requests
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from datetime import datetime, timedelta
 from io import BytesIO
 import textwrap
@@ -185,7 +185,10 @@ AJUSTES_CAMPANA = {
 
     "CYBER WEEK": {
         "texto_color": None,
-        "PPL":     {"precio_dx": -2, "precio_dy": 25},
+        # PPL: foto 10% mas chica y 25px mas abajo para que no choque con el logo
+        # CYBER WEEK. img_dx +32 la mantiene centrada al achicarla.
+        "PPL":     {"img_escala": 0.90, "img_dx": 32, "img_dy": 25,
+                    "txt_dx": -6, "txt_dy": 43, "precio_dx": -29, "precio_dy": 59},
         "STORY":   {"img_dy": -49},
         "DISPLAY": {"img_dx": -19, "img_dy": -1, "txt_dx": -7,
                     "precio_dx": -11, "precio_dy": 1},
@@ -218,6 +221,32 @@ def resolver_carpeta_fondos(tienda, tipo):
               f"Se usa '{candidatas[0]}'; renombra para dejar una sola.")
         return os.path.join(base, candidatas[0])
     return exacta
+
+# ======================================================================
+# FOTOS NITIDAS
+# ======================================================================
+# AJUSTE: las fotos del producto salian borrosas. Dos causas:
+#  1) thumbnail() de Pillow por defecto hace una reduccion rapida previa
+#     (reducing_gap=2.0) que suaviza la imagen. Aqui se desactiva.
+#  2) Al achicar una foto siempre se pierde algo de filo y no se recuperaba.
+#     Ahora se aplica un enfoque suave (UnsharpMask) despues de achicar.
+NITIDEZ = {"radius": 1.2, "percent": 90, "threshold": 2}
+
+def afilar(im):
+    """Enfoque suave que respeta la transparencia del calado."""
+    filtro = ImageFilter.UnsharpMask(**NITIDEZ)
+    if im.mode == "RGBA":
+        alpha = im.getchannel("A")
+        rgb = im.convert("RGB").filter(filtro)
+        rgb.putalpha(alpha)
+        return rgb
+    return im.filter(filtro)
+
+def foto_nitida(im, caja):
+    """Igual que im.thumbnail(caja) pero sin reduccion rapida y con enfoque."""
+    im = im.copy()
+    im.thumbnail((max(1, int(caja[0])), max(1, int(caja[1]))), Image.Resampling.LANCZOS, reducing_gap=None)
+    return afilar(im)
 
 def normalizar_lienzo(img, formato, ruta_fondo):
     """Fuerza el fondo a la medida oficial del formato. Devuelve la imagen lista."""
@@ -464,11 +493,16 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             if i >= 8: break
             p_hay_precio = tiene_precio(p.get('Precio desc'))
             xp, yp = 65 + (i % 2) * 495, current_y_top + (i // 2) * (box_h + 12)
+            # AJUSTE: con cantidad impar (3, 5, 7) el ultimo producto queda solo en su
+            # fila; se centra en vez de quedar pegado a la izquierda.
+            _n_vis = min(num_prod, 8)
+            if _n_vis % 2 == 1 and i == _n_vis - 1 and num_prod > 1:
+                xp = 540 - 240
             try:
                 url_foto = p.get('Foto del producto calado') or p.get('Foto')
                 if url_foto:
                     pi_fly = Image.open(BytesIO(requests.get(url_foto, timeout=10).content)).convert("RGBA")
-                    pi_fly.thumbnail((img_size_w, img_size_h), Image.Resampling.LANCZOS)
+                    pi_fly = foto_nitida(pi_fly, (img_size_w, img_size_h))
                     # AJUSTE: se sube la imagen 10px (antes yp + 20)
                     img.paste(pi_fly, (int(xp + 240 - pi_fly.width // 2), int(yp + 10)), pi_fly)
             except: pass
@@ -511,7 +545,9 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
             line_c = "#00ACDE" if es_eferton else "#0A74DA"
             if i % 2 == 0 and (i + 1) < num_prod: draw_dotted_line(draw, (xp + 475, yp + 20), (xp + 475, yp + box_h - 20), line_c)
-            if i < (num_prod - 2): draw_dotted_line(draw, (xp + 20, yp + box_h + 6), (xp + 450, yp + box_h + 6), line_c)
+            # AJUSTE: la linea separadora va debajo de TODAS las filas menos la ultima.
+            # Antes, con 5 productos, la fila 2 tenia linea solo bajo el de la izquierda.
+            if (i // 2) < (min(num_prod, 8) - 1) // 2: draw_dotted_line(draw, (xp + 20, yp + box_h + 6), (xp + 450, yp + box_h + 6), line_c)
         l_m = 70 if es_eferton else 62
         # AJUSTE: legales del flyer suben 10px (antes 1835)
         draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1825 + D("legales_dy"), l_m, 1080 - l_m, (255,255,255), line_spacing_offset=1, force_justify=True)
@@ -520,7 +556,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         es_aniv = "ANIVERSARIO" in tipo
         if es_eferton or es_aniv:
             if formato == "PPL":
-                pi.thumbnail((int(647*_esc), int(670*_esc)), Image.Resampling.LANCZOS)
+                pi = foto_nitida(pi, (int(647*_esc), int(670*_esc)))
                 px_img = 277 if es_aniv else 217  # AJUSTE: producto centrado en versión EFERTON (antes 156)
                 img.paste(pi, (px_img + D("img_dx"), 183 + D("img_dy")), pi)  # AJUSTE: sube más para centralizar (antes 223; original 243)
 
@@ -573,7 +609,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
 
             elif formato == "STORY":
                 # AJUSTE: foto centrada en el lienzo real (antes fija en x=72, centro caía en 550)
-                pi.thumbnail((int(956*_esc), int(956*_esc)), Image.Resampling.LANCZOS)
+                pi = foto_nitida(pi, (int(956*_esc), int(956*_esc)))
                 img.paste(pi, ((1080 - pi.width) // 2 + D("img_dx"), 526 + D("img_dy")), pi)
 
                 # AJUSTE: preciador un poco más chico para que quepa espejado sin pisar el nombre
@@ -614,7 +650,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 px_img = (180 if es_aniv else 420) + D("img_dx")  # AJUSTE: producto un poco más a la izquierda (antes 440)
                 cx = (820 if es_aniv else 240) + D("txt_dx")       # AJUSTE: texto un poco más a la izquierda (antes 260)
 
-                pi.thumbnail((int(460*_esc), int(460*_esc)), Image.Resampling.LANCZOS); img.paste(pi, (px_img, 25 + D("img_dy")), pi)
+                pi = foto_nitida(pi, (int(460*_esc), int(460*_esc))); img.paste(pi, (px_img, 25 + D("img_dy")), pi)
                 draw.text((cx, 200 + D("txt_dy")), row['Marca'], font=ImageFont.truetype(f_m.path, f_m.size - 2), fill=(255,255,255), anchor="mm")  # AJUSTE: sube más (antes 230; original 250)
                 ny = 240 + D("txt_dy")  # AJUSTE: sube más (antes 270; original 290)
                 for line in textwrap.wrap(str(row['Nombre del producto']), width=20)[:2]:
@@ -630,7 +666,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), f_l, (485 if hay_precio else 480) + D("legales_dy"), 40, 960, (255,255,255), force_justify=True)
         else:
             if formato == "PPL":
-                pi.thumbnail((int(682*_esc), int(682*_esc)), Image.Resampling.LANCZOS); img.paste(pi, (310 + D("img_dx"), 287 + D("img_dy")), pi)
+                pi = foto_nitida(pi, (int(682*_esc), int(682*_esc))); img.paste(pi, (310 + D("img_dx"), 287 + D("img_dy")), pi)
                 _lx = 91 + D("txt_dx")
                 draw.text((_lx, 639 + D("txt_dy")), row['Marca'], font=ImageFont.truetype(f"{path_fonts}/Poppins-Medium.ttf", 30), fill=(255,255,255), anchor="ls")
                 lines = textwrap.wrap(row['Nombre del producto'], width=13); ny = 675 + D("txt_dy")
@@ -643,7 +679,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     draw.text((_px + draw.textlength("S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 44)) + 10, py), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 80), fill=(255,255,255), anchor="ls")
                 draw_justified_text(draw, str(row['Legales']), f_l, 998 + D("legales_dy"), 73, 1007, (255,255,255), force_justify=True)
             elif formato == "STORY":
-                pi.thumbnail((int(935*_esc), int(935*_esc)), Image.Resampling.LANCZOS); img.paste(pi, (78 + D("img_dx"), 580 + D("img_dy")), pi)
+                pi = foto_nitida(pi, (int(935*_esc), int(935*_esc))); img.paste(pi, (78 + D("img_dx"), 580 + D("img_dy")), pi)
                 # Sin precio: 1 sola columna, el bloque se centra
                 lx = (147 if hay_precio else STORY_X_SIN_PRECIO) + D("txt_dx")
                 anchor_txt = "ls" if hay_precio else "ms"
@@ -657,7 +693,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                     draw.text((_px + draw.textlength("S/", font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 71)) + 15, py_irr), precio_val, font=ImageFont.truetype(f"{path_fonts}/Poppins-ExtraBold.ttf", 128), fill=(255,255,255), anchor="ls")
                 draw_justified_text(draw, str(row['Legales']), ImageFont.truetype(f"{path_fonts}/Poppins-Regular.ttf", l_size + 2), 1800 + D("legales_dy"), 70, 1010, (255,255,255), line_spacing_offset=1, force_justify=True)
             elif formato == "DISPLAY":
-                pi.thumbnail((int(485*_esc), int(465*_esc)), Image.Resampling.LANCZOS); img.paste(pi, (412 + D("img_dx"), 24 + D("img_dy")), pi); lx = 91 + D("txt_dx")
+                pi = foto_nitida(pi, (int(485*_esc), int(465*_esc))); img.paste(pi, (412 + D("img_dx"), 24 + D("img_dy")), pi); lx = 91 + D("txt_dx")
                 draw.text((lx, 219 + D("txt_dy")), row['Marca'], font=f_m, fill=(255,255,255), anchor="ls")
                 ny = 255 + D("txt_dy")
                 for lp in textwrap.wrap(row['Nombre del producto'], width=20)[:4]: draw.text((lx, ny), lp, font=f_p, fill=(255,255,255), anchor="ls"); ny += 25
