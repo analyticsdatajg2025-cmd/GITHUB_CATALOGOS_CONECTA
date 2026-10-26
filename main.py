@@ -326,7 +326,7 @@ LAYOUTS = {
         "FLYER": {
             "fecha": {
                 "x": 540,
-                "y": 248,
+                "y": 316,
                 "h": 50,
                 "tam": 24,
                 "fuente": "HurmeGeometricSans1 Bold.otf",
@@ -348,9 +348,9 @@ LAYOUTS = {
                 "area_h": 0,
                 "centrar_impar": True,
                 "estilo": {"fondo": "#FFFFFF", "borde": "#FED700", "borde_w": 2, "radio": 15, "lineas": None},
-                "elementos": {"foto": {"x": 59, "y": 20, "w": 338, "h": 338, "alinear_h": "centro", "alinear_v": "arriba"}, "marca": {"x": 14, "y": 377, "w": 200, "tam": 20, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 24, "alinear": "centro", "max_lineas": 1}, "nombre": {"x": 14, "y": 402, "w": 200, "tam": 18, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 20, "max_lineas": 2, "alinear": "centro"}, "sku": {"x": 242, "y": 440, "w": 200, "tam": 13, "fuente": "HurmeGeometricSans1.otf", "color": "#0A063C", "interlineado": 16, "alinear": "centro", "max_lineas": 1}, "precio": {
-        "x": 342,
-        "y": 420,
+                "elementos": {"foto": {"x": 59, "y": 20, "w": 338, "h": 338, "alinear_h": "centro", "alinear_v": "arriba"}, "marca": {"x": 14, "y": 377, "w": 200, "tam": 20, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 24, "alinear": "centro", "max_lineas": 1}, "nombre": {"x": 14, "y": 402, "w": 200, "tam": 18, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 20, "max_lineas": 2, "alinear": "centro"}, "sku": {"x": 232, "y": 434, "w": 200, "tam": 13, "fuente": "HurmeGeometricSans1.otf", "color": "#0A063C", "interlineado": 16, "alinear": "centro", "max_lineas": 1}, "precio": {
+        "x": 332,
+        "y": 412,
         "alinear": "centro",
         "tam_simbolo": 24,
         "tam_numero": 60,
