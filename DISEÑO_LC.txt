@@ -4,7 +4,7 @@ import requests
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from datetime import datetime, timedelta
 from io import BytesIO
 import textwrap
@@ -147,11 +147,13 @@ AJUSTES_CAMPANA = {
     },
     "CYBER WEEK": {
         "texto_color": None,
-        "PPL":   {"img_dx": 14, "img_dy": 37, "txt_dx": -35, "txt_dy": 33,
-                  "precio_dx": -21, "precio_dy": 57, "legales_dy": 25},
-        "STORY": {"img_dy": -66, "txt_dy": -49, "precio_dy": 7},
-        "FLYER": {"fecha_dy": 69, "grid_dy": 24, "legales_dy": 14},
-        # DISPLAY sin calibrar: usa las coordenadas de siempre.
+        # PPL: foto 12% mas chica para que no choque con el logo CYBER WEEK
+        "PPL":     {"img_escala": 0.88,
+                    "img_dx": 51, "img_dy": 65, "txt_dx": -25, "txt_dy": 76,
+                    "precio_dx": -21, "precio_dy": 92, "legales_dy": 45},
+        "STORY":   {"precio_dy": 52},
+        "DISPLAY": {"txt_dx": -21, "txt_dy": 30, "precio_dx": -23, "precio_dy": 20},
+        "FLYER":   {"fecha_dy": 76, "grid_dy": 46, "legales_dy": 14},
     },
 }
 
@@ -167,6 +169,32 @@ FORZAR_REGENERAR = {
     "KV COMPUTO LC",
     "DSCTOS POWER",
 }
+
+# ======================================================================
+# FOTOS NITIDAS
+# ======================================================================
+# AJUSTE: las fotos del producto salian borrosas. Dos causas:
+#  1) thumbnail() de Pillow por defecto hace una reduccion rapida previa
+#     (reducing_gap=2.0) que suaviza la imagen. Aqui se desactiva.
+#  2) Al achicar una foto siempre se pierde algo de filo y no se recuperaba.
+#     Ahora se aplica un enfoque suave (UnsharpMask) despues de achicar.
+NITIDEZ = {"radius": 1.2, "percent": 90, "threshold": 2}
+
+def afilar(im):
+    """Enfoque suave que respeta la transparencia del calado."""
+    filtro = ImageFilter.UnsharpMask(**NITIDEZ)
+    if im.mode == "RGBA":
+        alpha = im.getchannel("A")
+        rgb = im.convert("RGB").filter(filtro)
+        rgb.putalpha(alpha)
+        return rgb
+    return im.filter(filtro)
+
+def foto_nitida(im, caja):
+    """Igual que im.thumbnail(caja) pero sin reduccion rapida y con enfoque."""
+    im = im.copy()
+    im.thumbnail((max(1, int(caja[0])), max(1, int(caja[1]))), Image.Resampling.LANCZOS, reducing_gap=None)
+    return afilar(im)
 
 def normalizar_lienzo(img, formato, ruta_fondo):
     """Fuerza el fondo a la medida oficial del formato. Devuelve la imagen lista."""
@@ -338,9 +366,13 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             try: p_val = "{:,}".format(int(float(p['Precio desc'])))
             except: p_val = str(p['Precio desc'])
             xp = 64 + (i % 2) * (box_w + 40); yp = 340 + D("grid_dy") + (i // 2) * (box_h + gap_y)
+            # AJUSTE: con cantidad impar (3, 5, 7) el ultimo producto queda solo en su
+            # fila; se centra en vez de quedar pegado a la izquierda.
+            if min(num_productos, 8) % 2 == 1 and i == min(num_productos, 8) - 1 and num_productos > 1:
+                xp = (1080 - box_w) // 2
             draw.rounded_rectangle([xp, yp, xp+box_w, yp+box_h], radius=15, fill=(255,255,255), outline=border_c, width=2)
             try:
-                pi_url = p['Foto del producto calado']; pi = Image.open(BytesIO(requests.get(pi_url).content)).convert("RGBA"); pi.thumbnail((img_size, img_size), Image.Resampling.LANCZOS)
+                pi_url = p['Foto del producto calado']; pi = Image.open(BytesIO(requests.get(pi_url).content)).convert("RGBA"); pi = foto_nitida(pi, (img_size, img_size))
                 img.paste(pi, (int(xp + (box_w - pi.width) // 2), int(yp + y_offset_img)), pi)
             except: pass
 
@@ -376,7 +408,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         pi = Image.open(BytesIO(requests.get(row['Foto del producto calado']).content)).convert("RGBA")
         if formato == "DISPLAY":
             _esc = D("img_escala") or 1.0  # AJUSTE: factor de tamaño de la foto
-            pi.thumbnail((int(483 * _esc), int(483 * _esc)), Image.Resampling.LANCZOS); img.paste(pi, (423 + D("img_dx"), 25 + D("img_dy")), pi); cx, ny = 255 + D("txt_dx"), 245 + D("txt_dy")
+            pi = foto_nitida(pi, (int(483 * _esc), int(483 * _esc))); img.paste(pi, (423 + D("img_dx"), 25 + D("img_dy")), pi); cx, ny = 255 + D("txt_dx"), 245 + D("txt_dy")
             draw.text((cx, 195 + D("txt_dy")), row['Marca'], font=f_m, fill=txt_c, anchor="mt")
             lineas_nombre = textwrap.wrap(row['Nombre del producto'], width=22)[:2]
             for l in lineas_nombre: draw.text((cx, ny), l, font=f_p, fill=txt_c, anchor="mt"); ny += 27
@@ -405,7 +437,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         elif formato == "STORY":
             # AJUSTE: foto centrada en el lienzo real y subida 50px para despegarla del texto
             _esc = D("img_escala") or 1.0  # AJUSTE: factor de tamaño de la foto
-            pi = pi.resize((int(845 * _esc), int(845 * _esc)), Image.Resampling.LANCZOS)
+            pi = afilar(pi.resize((int(845 * _esc), int(845 * _esc)), Image.Resampling.LANCZOS, reducing_gap=None))
             img.paste(pi, ((1080 - pi.width) // 2 + D("img_dx"), 640 + D("img_dy")), pi)   # antes (140, 690) -> centro caía en x=562
             cx_textos, anchor_y_textos = STORY_MARGEN + D("txt_dx"), 1542 + D("txt_dy")
             draw.text((cx_textos, anchor_y_textos), row['Marca'], font=f_m, fill=txt_c, anchor="lt"); ny = anchor_y_textos + 65
@@ -426,7 +458,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
             draw_justified_text(draw, cuerpo_legal, f_l, y_start=1797 + D("legales_dy"), x_start=65, x_end=1015, fill=txt_c, line_spacing=2, prefix_width=ancho_negrita)
         elif formato == "PPL":
             _esc = D("img_escala") or 1.0  # AJUSTE: factor de tamaño de la foto
-            pi.thumbnail((int(779 * _esc), int(598 * _esc)), Image.Resampling.LANCZOS); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2
+            pi = foto_nitida(pi, (int(779 * _esc), int(598 * _esc))); canvas_width = 1080; px_centrado = (canvas_width - pi.width) // 2
             py_posicion = 210 + D("img_dy")  # AJUSTE: sube la foto del producto (antes 240)
             img.paste(pi, (px_centrado + D("img_dx"), py_posicion), pi); y_base_alineacion, y_precio = 850 + D("txt_dy"), 865 + D("precio_dy")
             if hay_precio:
