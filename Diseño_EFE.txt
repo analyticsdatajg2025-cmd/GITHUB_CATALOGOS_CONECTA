@@ -181,6 +181,15 @@ AJUSTES_CAMPANA = {
                     "precio_dx": -5, "precio_dy": 64},
         # FLYER sin calibrar: usa las coordenadas de siempre.
     },
+
+    "CYBER WEEK": {
+        "texto_color": None,
+        "PPL":     {"precio_dx": -2, "precio_dy": 25},
+        "STORY":   {"img_dy": -49},
+        "DISPLAY": {"img_dx": -19, "img_dy": -1, "txt_dx": -7,
+                    "precio_dx": -11, "precio_dy": 1},
+        "FLYER":   {"legales_dy": 10},
+    },
 }
 
 def resolver_carpeta_fondos(tienda, tipo):
