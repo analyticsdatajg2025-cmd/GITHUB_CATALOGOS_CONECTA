@@ -127,6 +127,7 @@ LAYOUT_EFERTON_EXTRA = {
 # Pon aqui el "Tipo de diseño" (en MAYUSCULAS) para regenerarlo SIEMPRE.
 # Deja el set vacio ( set() ) cuando termines, o cada corrida rehara todo.
 FORZAR_REGENERAR = {
+    "CYBER EFE",
     "EFERTON DE LA SEMANA",
     "KV COMPUTO EFE",
     "PRECIO IRRESISTIBLE",
@@ -411,7 +412,8 @@ def get_sheets_data():
 
     res_sheet = sheet.worksheet("Resultados")
     v_act = res_sheet.get_all_values()
-    viejos = {r[1].strip().upper() for r in v_act[1:] if len(r) > 1}
+    # AJUSTE: llave -> numero de fila en 'Resultados', para actualizar esa fila al regenerar
+    viejos = {r[1].strip().upper(): i for i, r in enumerate(v_act[1:], start=2) if len(r) > 1}
     return data, res_sheet, viejos
 
 # ======================================================================
@@ -427,6 +429,348 @@ def get_sheets_data():
 # Una campaña/formato que NO este aqui se sigue dibujando como siempre
 # (coordenadas fijas + AJUSTES_CAMPANA).
 LAYOUTS = {
+    # Calibrador Conecta, mismas coordenadas que CYBER LC (fuentes Poppins, texto blanco)
+    "CYBER EFE": {
+        "PPL": {
+            "foto": {
+                "x": 214,
+                "y": 304,
+                "w": 652,
+                "h": 500,
+                "alinear_h": "centro",
+                "alinear_v": "arriba"
+            },
+            "marca": {
+                "x": 315,
+                "y": 850,
+                "w": 450,
+                "tam": 43,
+                "fuente": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 48,
+                "max_lineas": 1,
+                "alinear": "centro"
+            },
+            "nombre": {
+                "x": 305,
+                "y": 880,
+                "w": 470,
+                "tam": 23,
+                "fuente": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 30,
+                "max_lineas": 2,
+                "alinear": "centro"
+            },
+            "sku": {
+                "x": 440,
+                "y": 906,
+                "w": 200,
+                "tam": 14,
+                "fuente": "Poppins-Regular.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 17,
+                "alinear": "centro",
+                "max_lineas": 1
+            },
+            "legales": {
+                "x": 50,
+                "y": 1019,
+                "w": 980,
+                "tam": 11,
+                "fuente": "Poppins-Regular.ttf",
+                "fuente_negrita": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 14,
+                "justificar": True
+            },
+            "imagenes": [
+                {
+                    "etiqueta": "cta-EFE",
+                    "archivo": "cta-EFE.png",
+                    "x": 381,
+                    "y": 927,
+                    "w": 319,
+                    "h": 59
+                }
+            ]
+        },
+        "STORY": {
+            "foto": {
+                "x": 63,
+                "y": 447,
+                "w": 954,
+                "h": 954,
+                "alinear_h": "centro",
+                "alinear_v": "arriba"
+            },
+            "marca": {
+                "x": 310,
+                "y": 1500,
+                "w": 460,
+                "tam": 53,
+                "fuente": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 60,
+                "max_lineas": 1,
+                "alinear": "centro"
+            },
+            "nombre": {
+                "x": 164,
+                "y": 1558,
+                "w": 753,
+                "tam": 32,
+                "fuente": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 40,
+                "max_lineas": 2,
+                "alinear": "centro"
+            },
+            "sku": {
+                "x": 441,
+                "y": 1606,
+                "w": 200,
+                "tam": 22,
+                "fuente": "Poppins-Regular.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 22,
+                "alinear": "centro",
+                "max_lineas": 1
+            },
+            "legales": {
+                "x": 65,
+                "y": 1807,
+                "w": 950,
+                "tam": 12,
+                "fuente": "Poppins-Regular.ttf",
+                "fuente_negrita": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 15,
+                "justificar": True
+            },
+            "imagenes": [
+                {
+                    "etiqueta": "cta-EFE",
+                    "archivo": "cta-EFE.png",
+                    "x": 381,
+                    "y": 1651,
+                    "w": 319,
+                    "h": 59
+                }
+            ]
+        },
+        "DISPLAY": {
+            "foto": {
+                "x": 480,
+                "y": 20,
+                "w": 444,
+                "h": 444,
+                "alinear_h": "centro",
+                "alinear_v": "arriba"
+            },
+            "marca": {
+                "x": 75,
+                "y": 233,
+                "w": 300,
+                "tam": 34,
+                "fuente": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 40,
+                "alinear": "centro",
+                "max_lineas": 1
+            },
+            "nombre": {
+                "x": 32,
+                "y": 271,
+                "w": 387,
+                "tam": 20,
+                "fuente": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 27,
+                "max_lineas": 2,
+                "alinear": "centro"
+            },
+            "sku": {
+                "x": 125,
+                "y": 312,
+                "w": 200,
+                "tam": 13,
+                "fuente": "Poppins-Regular.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 16,
+                "alinear": "centro",
+                "max_lineas": 1
+            },
+            "legales": {
+                "x": 40,
+                "y": 497,
+                "w": 920,
+                "tam": 7,
+                "fuente": "Poppins-Regular.ttf",
+                "fuente_negrita": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 9,
+                "justificar": True
+            },
+            "imagenes": [
+                {
+                    "etiqueta": "cta-EFE",
+                    "archivo": "cta-EFE.png",
+                    "x": 129,
+                    "y": 362,
+                    "w": 193,
+                    "h": 36
+                }
+            ]
+        },
+        "FLYER": {
+            "fecha": {
+                "x": 540,
+                "y": 248,
+                "h": 50,
+                "tam": 24,
+                "fuente": "Poppins-SemiBold.ttf",
+                "pad_x": 17,
+                "alinear": "centro",
+                "relleno": None,
+                "borde": "#FFFFFF",
+                "borde_w": 3,
+                "radio": 10,
+                "color": "#FFFFFF"
+            },
+            "grid": {
+                "x": 64,
+                "y": 340,
+                "celda_w": 456,
+                "celda_h": 456,
+                "gap_x": 40,
+                "gap_y": 30,
+                "area_h": 0,
+                "centrar_impar": True,
+                "estilo": {
+                    "fondo": "#FFFFFF",
+                    "borde": "#FED700",
+                    "borde_w": 2,
+                    "radio": 15,
+                    "lineas": None
+                },
+                "elementos": {
+                    "foto": {
+                        "x": 59,
+                        "y": 19,
+                        "w": 338,
+                        "h": 338,
+                        "alinear_h": "centro",
+                        "alinear_v": "arriba"
+                    },
+                    "marca": {
+                        "x": 128,
+                        "y": 391,
+                        "w": 200,
+                        "tam": 20,
+                        "fuente": "Poppins-SemiBold.ttf",
+                        "color": "#0A063C",
+                        "interlineado": 24,
+                        "alinear": "centro",
+                        "max_lineas": 1
+                    },
+                    "nombre": {
+                        "x": 51,
+                        "y": 414,
+                        "w": 355,
+                        "tam": 18,
+                        "fuente": "Poppins-SemiBold.ttf",
+                        "color": "#0A063C",
+                        "interlineado": 20,
+                        "max_lineas": 2,
+                        "alinear": "centro"
+                    },
+                    "sku": {
+                        "x": 128,
+                        "y": 432,
+                        "w": 200,
+                        "tam": 13,
+                        "fuente": "Poppins-Regular.ttf",
+                        "color": "#0A063C",
+                        "interlineado": 16,
+                        "alinear": "centro",
+                        "max_lineas": 1
+                    }
+                }
+            },
+            "grid_8": {
+                "x": 64,
+                "y": 340,
+                "celda_w": 456,
+                "celda_h": 375,
+                "gap_x": 40,
+                "gap_y": 15,
+                "area_h": 0,
+                "centrar_impar": True,
+                "estilo": {
+                    "fondo": "#FFFFFF",
+                    "borde": "#FED700",
+                    "borde_w": 2,
+                    "radio": 15,
+                    "lineas": None
+                },
+                "elementos": {
+                    "foto": {
+                        "x": 103,
+                        "y": 10,
+                        "w": 250,
+                        "h": 250,
+                        "alinear_h": "centro",
+                        "alinear_v": "arriba"
+                    },
+                    "marca": {
+                        "x": 14,
+                        "y": 296,
+                        "w": 200,
+                        "tam": 20,
+                        "fuente": "Poppins-SemiBold.ttf",
+                        "color": "#0A063C",
+                        "interlineado": 24,
+                        "alinear": "centro",
+                        "max_lineas": 1
+                    },
+                    "nombre": {
+                        "x": 14,
+                        "y": 321,
+                        "w": 200,
+                        "tam": 18,
+                        "fuente": "Poppins-SemiBold.ttf",
+                        "color": "#0A063C",
+                        "interlineado": 20,
+                        "max_lineas": 2,
+                        "alinear": "centro"
+                    },
+                    "sku": {
+                        "x": 242,
+                        "y": 359,
+                        "w": 200,
+                        "tam": 13,
+                        "fuente": "Poppins-Regular.ttf",
+                        "color": "#0A063C",
+                        "interlineado": 16,
+                        "alinear": "centro",
+                        "max_lineas": 1
+                    }
+                }
+            },
+            "legales": {
+                "x": 64,
+                "y": 1839,
+                "w": 952,
+                "tam": 16,
+                "fuente": "Poppins-Regular.ttf",
+                "fuente_negrita": "Poppins-SemiBold.ttf",
+                "color": "#FFFFFF",
+                "interlineado": 19,
+                "justificar": True
+            }
+        }
+    },
     "CYBER WEEK": {
         "FLYER": {
             "fecha": {"x": 540, "y": 276, "h": 40, "tam": 23, "fuente": "Poppins-SemiBold.ttf", "pad_x": 20, "alinear": "centro", "relleno": "#FFA002", "borde": None, "borde_w": 0, "radio": 10, "color": "#FFFFFF"},
@@ -707,7 +1051,48 @@ def _m_celdas(grid, n):
         pos.append((x, y0 + fila * (grid["celda_h"] + grid["gap_y"])))
     return pos
 
-def dibujar_layout(img, draw, lay, data_input, path_fonts):
+# --- AJUSTE: elementos agregados en el Calibrador -------------------------
+# "extras"   : textos libres o de una columna del Sheet (misma regla que los textos base)
+# "imagenes" : imagenes fijas (boton, sello, logo). El archivo se busca, con el mismo nombre,
+#              en la carpeta de fondos de la campaña, luego en FONDOS/<TIENDA>/ y luego en ELEMENTOS/.
+#              Se dibuja estirada a su caja w x h, igual que en el Calibrador.
+_MOTOR_IMGS = {}
+
+def _m_valor_columna(row, columna):
+    """Valor de una columna del Sheet sin importar mayusculas ni espacios. '' si no hay."""
+    objetivo = str(columna or "").strip().lower()
+    if not objetivo:
+        return ""
+    for c in row.index:
+        if str(c).strip().lower() == objetivo:
+            v = row[c]
+            return "" if v is None or str(v).strip() in ("", "nan", "None") else str(v)
+    return ""
+
+def _m_extra(draw, el, row, path_fonts, ox=0, oy=0):
+    texto = _m_valor_columna(row, el.get("columna")) or el.get("texto", "")
+    _m_texto(draw, el, texto, path_fonts, ox, oy)
+
+def _m_imagen(img, el, path_fondos):
+    if el.get("oculto"):
+        return
+    nombre = str(el.get("archivo") or "").strip()
+    if not nombre:
+        return
+    carpetas = [c for c in (path_fondos, os.path.dirname(path_fondos) if path_fondos else None, "ELEMENTOS") if c]
+    ruta = next((os.path.join(c, nombre) for c in carpetas if os.path.exists(os.path.join(c, nombre))), None)
+    if not ruta:
+        print(f"⚠️  IMAGEN NO ENCONTRADA: '{nombre}'. Subela con ese nombre a una de estas carpetas: {carpetas}")
+        return
+    if ruta not in _MOTOR_IMGS:
+        _MOTOR_IMGS[ruta] = Image.open(ruta).convert("RGBA")
+    w = max(1, int(round(float(el.get("w", 1)))))
+    h = max(1, int(round(float(el.get("h", 1)))))
+    pieza = _MOTOR_IMGS[ruta].resize((w, h), Image.LANCZOS)
+    img.paste(pieza, (int(round(float(el.get("x", 0)))), int(round(float(el.get("y", 0))))), pieza)
+
+
+def dibujar_layout(img, draw, lay, data_input, path_fonts, path_fondos=None):
     """Dibuja una pieza completa a partir de su bloque en LAYOUTS."""
     es_flyer = isinstance(data_input, pd.DataFrame)
     row = data_input.iloc[0] if es_flyer else data_input
@@ -718,6 +1103,8 @@ def dibujar_layout(img, draw, lay, data_input, path_fonts):
                 _m_texto(draw, lay[k], row.get(campo), path_fonts)
         if "precio" in lay and tiene_precio(row.get('Precio desc')):
             _m_precio(draw, lay["precio"], _m_precio_txt(row['Precio desc']), path_fonts)
+        for ex in lay.get("extras", []) or []:
+            _m_extra(draw, ex, row, path_fonts)
     else:
         if "fecha" in lay:
             _m_fecha(draw, lay["fecha"], str(row.get('Fecha_disponibilidad_flyer', '')).upper(), path_fonts)
@@ -743,6 +1130,8 @@ def dibujar_layout(img, draw, lay, data_input, path_fonts):
                         _m_texto(draw, el[k], p.get(campo), path_fonts, cx, cy)
                 if "precio" in el and tiene_precio(p.get('Precio desc')):
                     _m_precio(draw, el["precio"], _m_precio_txt(p['Precio desc']), path_fonts, cx, cy)
+                for ex in grid.get("extras", []) or []:
+                    _m_extra(draw, ex, p, path_fonts, cx, cy)
             lineas = est.get("lineas")
             if lineas and caja_visible:
                 col = _m_color(lineas)
@@ -755,8 +1144,39 @@ def dibujar_layout(img, draw, lay, data_input, path_fonts):
                     if fila < filas - 1:
                         yh = cy + grid["celda_h"] + grid["gap_y"] / 2
                         _m_punteada(draw, (cx + 20, yh), (cx + grid["celda_w"] - 20, yh), col)
+    if es_flyer:
+        for ex in lay.get("extras", []) or []:
+            _m_extra(draw, ex, row, path_fonts)
+    for im_el in lay.get("imagenes", []) or []:
+        _m_imagen(img, im_el, path_fondos)
     if "legales" in lay:
         _m_legales(draw, lay["legales"], row.get('Legales'), path_fonts)
+
+
+# ======================================================================
+# CARPETAS DE SALIDA
+# ======================================================================
+# AJUSTE: las piezas ya no van sueltas en output/. Ahora:
+#   output/<TIENDA>/<SKU>/<SKU>_<FORMATO>.jpg   -> PPL, STORY y DISPLAY de ese SKU
+#   output/<TIENDA>/FLYER/<ID_Flyer>.jpg        -> un archivo por flyer
+from urllib.parse import quote
+
+def _limpio(valor):
+    return str(valor).strip().replace("/", "-").replace("\\", "-")
+
+def ruta_salida(tienda, data_input):
+    """Ruta de la pieza dentro de output/ (sin 'output/')."""
+    if isinstance(data_input, pd.DataFrame):
+        return f"{tienda}/FLYER/{_limpio(data_input.iloc[0]['ID_Flyer'])}.jpg"
+    sku = _limpio(data_input['SKU'])
+    formato = str(data_input['Formato']).upper().strip()
+    return f"{tienda}/{sku}/{sku}_{formato}.jpg"
+
+def guardar_pieza(img, tienda, data_input):
+    rel = ruta_salida(tienda, data_input)
+    os.makedirs(os.path.dirname(os.path.join("output", rel)), exist_ok=True)
+    img.save(os.path.join("output", rel), quality=100, subsampling=0)
+    return RAW_URL + quote(rel, safe="/+")
 
 
 def generar_diseno(data_input, color_version="AMARILLO"):
@@ -816,7 +1236,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     # LAYOUTS: si esta campaña/formato fue diseñada en el Calibrador, se dibuja con el motor
     _lay = LAYOUTS.get(str(tipo).strip().upper(), {}).get(formato)
     if _lay:
-        dibujar_layout(img, draw, _lay, data_input, path_fonts)
+        dibujar_layout(img, draw, _lay, data_input, path_fonts, path_fondos)
     elif formato == "FLYER":
         f_txt = str(row['Fecha_disponibilidad_flyer']).upper()
         f_f_semibold = ImageFont.truetype(f"{path_fonts}/Poppins-SemiBold.ttf", 23)
@@ -1056,9 +1476,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
                 draw_justified_text(draw, str(row['Legales']), f_l, (490 if hay_precio else 485) + D("legales_dy"), 40, 960, (255,255,255), force_justify=True)
 
     # --- GUARDADO FINAL (SKU LIMPIO) ---
-    sku_limpio = str(row['SKU'] or row['ID_Flyer']).replace("/", "-").replace("\\", "-")
-    fname = f"{sku_limpio}_{formato}_{tienda}.jpg"
-    img.save(f"output/{fname}", quality=100, subsampling=0); return f"{RAW_URL}{fname}"
+    return guardar_pieza(img, tienda, data_input)  # AJUSTE: output/EFE/<SKU>/ y output/EFE/FLYER/
 
 def resolver_columna(df, nombre_buscado):
     """Devuelve el nombre REAL de la columna en df que coincide con nombre_buscado
@@ -1099,6 +1517,7 @@ def hay_que_generar(llave, nombre_archivo, tipo_camp=""):
 os.makedirs('output', exist_ok=True)
 h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
 filas_para_google = []
+filas_a_actualizar = []   # (numero de fila en Resultados, valores) de piezas regeneradas
 
 # Ciclo 1: Productos Individuales
 for idx, row in data.iterrows():
@@ -1107,18 +1526,20 @@ for idx, row in data.iterrows():
     tienda = str(row.get('Tienda', 'LC')).strip().upper()
     sku_val = str(row['SKU']).replace("/", "-").replace("\\", "-")
     llave = f"{sku_val}_{f_v}_{tienda}_EFE".upper()
-    archivo = f"{sku_val}_{f_v}_{tienda}.jpg"
+    archivo = ruta_salida(tienda, row)
     _era_nueva = llave not in viejos
     if hay_que_generar(llave, archivo, row['Tipo de diseño']):
         print(f"🎨 Generando: {llave}")
         url = generar_diseno(row)
         # Si la llave ya existia, solo se repone el archivo: la fila del Sheet
         # ya apunta a esa URL, asi que no se duplica el registro.
-        if url and _era_nueva:
-            # AJUSTE: columna H 'Link web' con el link del feed segun el SKU.
+        if url:
             # Orden: Fecha | ID | Tienda | Diseño | Formato | Color | Link Imagen | Link web
             lw = link_web(tienda, row['SKU'])
-            filas_para_google.append([h_lima, llave, tienda, row['Tipo de diseño'], f_v, "EFE", url, lw])
+            fila = [h_lima, llave, tienda, row['Tipo de diseño'], f_v, "EFE", url, lw]
+            # AJUSTE: si la pieza ya estaba en Resultados se actualiza ESA fila (link nuevo)
+            if _era_nueva: filas_para_google.append(fila)
+            else: filas_a_actualizar.append((viejos[llave], fila))
 
 # Ciclo 2: Flyers
 fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
@@ -1128,21 +1549,25 @@ for id_f, group in fly_g.groupby('ID_Flyer'):
     llave = f"{id_limpio}_FLYER_EFE".upper()
     # El archivo del flyer se nombra con el SKU del PRIMER producto del grupo
     # (asi lo guarda generar_diseno), no con el ID_Flyer.
-    _sku_fly = str(group.iloc[0]['SKU'] or id_f).replace("/", "-").replace("\\", "-")
-    archivo = f"{_sku_fly}_FLYER_EFE.jpg"
+    archivo = ruta_salida("EFE", group)
     _era_nueva = llave not in viejos
     if hay_que_generar(llave, archivo, group.iloc[0]['Tipo de diseño']):
         print(f"🎨 Generando Flyer: {llave}")
         url = generar_diseno(group)
-        if url and _era_nueva:
-            # AJUSTE: link web del flyer = link del primer SKU del grupo (ver FLYER_USA_PRIMER_SKU)
+        if url:
             lw = link_web("EFE", group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
-            filas_para_google.append([h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url, lw])
+            fila = [h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url, lw]
+            if _era_nueva: filas_para_google.append(fila)
+            else: filas_a_actualizar.append((viejos[llave], fila))
 
 # --- ESCRITURA FINAL MASIVA (SOLO 1 PETICIÓN) ---
 if filas_para_google:
     res_sheet.append_rows(filas_para_google)
     print(f"✅ Éxito: Se registraron {len(filas_para_google)} piezas nuevas.")
+# AJUSTE: piezas que ya estaban en Resultados -> se actualiza su misma fila (1 sola peticion)
+if filas_a_actualizar:
+    res_sheet.batch_update([{"range": f"A{n}:H{n}", "values": [fila]} for n, fila in filas_a_actualizar])
+    print(f"✅ Se actualizaron {len(filas_a_actualizar)} filas existentes en Resultados (link nuevo).")
 else:
     print("No se generaron piezas nuevas. Creando placeholder.")
     with open("output/placeholder.txt", "w") as f: f.write(f"Sin cambios: {h_lima}")
