@@ -1,0 +1,347 @@
+{
+  "nombre": "CYBER LC",
+  "tienda": "LC",
+  "comentario": "Sin precio, con botón cta-LC.png.",
+  "actualizado": "2026-11-06",
+  "formatos": {
+    "PPL": {
+      "foto": {
+        "x": 214,
+        "y": 304,
+        "w": 652,
+        "h": 500,
+        "alinear_h": "centro",
+        "alinear_v": "arriba"
+      },
+      "marca": {
+        "x": 315,
+        "y": 850,
+        "w": 450,
+        "tam": 43,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 48,
+        "max_lineas": 1,
+        "alinear": "centro"
+      },
+      "nombre": {
+        "x": 305,
+        "y": 880,
+        "w": 470,
+        "tam": 23,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 30,
+        "max_lineas": 2,
+        "alinear": "centro"
+      },
+      "sku": {
+        "x": 440,
+        "y": 906,
+        "w": 200,
+        "tam": 14,
+        "fuente": "HurmeGeometricSans1.otf",
+        "color": "#000000",
+        "interlineado": 17,
+        "alinear": "centro",
+        "max_lineas": 1
+      },
+      "legales": {
+        "x": 50,
+        "y": 1019,
+        "w": 980,
+        "tam": 11,
+        "fuente": "HurmeGeometricSans1.otf",
+        "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 14,
+        "justificar": true
+      },
+      "imagenes": [
+        {
+          "etiqueta": "cta-LC",
+          "archivo": "cta-LC.png",
+          "x": 381,
+          "y": 927,
+          "w": 319,
+          "h": 59
+        }
+      ]
+    },
+    "STORY": {
+      "foto": {
+        "x": 63,
+        "y": 447,
+        "w": 954,
+        "h": 954,
+        "alinear_h": "centro",
+        "alinear_v": "arriba"
+      },
+      "marca": {
+        "x": 310,
+        "y": 1500,
+        "w": 460,
+        "tam": 53,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 60,
+        "max_lineas": 1,
+        "alinear": "centro"
+      },
+      "nombre": {
+        "x": 164,
+        "y": 1558,
+        "w": 753,
+        "tam": 32,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 40,
+        "max_lineas": 2,
+        "alinear": "centro"
+      },
+      "sku": {
+        "x": 441,
+        "y": 1606,
+        "w": 200,
+        "tam": 22,
+        "fuente": "HurmeGeometricSans1.otf",
+        "color": "#000000",
+        "interlineado": 22,
+        "alinear": "centro",
+        "max_lineas": 1
+      },
+      "legales": {
+        "x": 65,
+        "y": 1807,
+        "w": 950,
+        "tam": 12,
+        "fuente": "HurmeGeometricSans1.otf",
+        "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 15,
+        "justificar": true
+      },
+      "imagenes": [
+        {
+          "etiqueta": "cta-LC",
+          "archivo": "cta-LC.png",
+          "x": 381,
+          "y": 1651,
+          "w": 319,
+          "h": 59
+        }
+      ]
+    },
+    "DISPLAY": {
+      "foto": {
+        "x": 480,
+        "y": 20,
+        "w": 444,
+        "h": 444,
+        "alinear_h": "centro",
+        "alinear_v": "arriba"
+      },
+      "marca": {
+        "x": 75,
+        "y": 233,
+        "w": 300,
+        "tam": 34,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 40,
+        "alinear": "centro",
+        "max_lineas": 1
+      },
+      "nombre": {
+        "x": 32,
+        "y": 271,
+        "w": 387,
+        "tam": 20,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 27,
+        "max_lineas": 2,
+        "alinear": "centro"
+      },
+      "sku": {
+        "x": 125,
+        "y": 312,
+        "w": 200,
+        "tam": 13,
+        "fuente": "HurmeGeometricSans1.otf",
+        "color": "#000000",
+        "interlineado": 16,
+        "alinear": "centro",
+        "max_lineas": 1
+      },
+      "legales": {
+        "x": 40,
+        "y": 497,
+        "w": 920,
+        "tam": 7,
+        "fuente": "HurmeGeometricSans1.otf",
+        "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 9,
+        "justificar": true
+      },
+      "imagenes": [
+        {
+          "etiqueta": "cta-LC",
+          "archivo": "cta-LC.png",
+          "x": 129,
+          "y": 362,
+          "w": 193,
+          "h": 36
+        }
+      ]
+    },
+    "FLYER": {
+      "fecha": {
+        "x": 540,
+        "y": 312,
+        "h": 50,
+        "tam": 24,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "pad_x": 17,
+        "alinear": "centro",
+        "relleno": null,
+        "borde": "#FFFFFF",
+        "borde_w": 3,
+        "radio": 10,
+        "color": "#FFFFFF"
+      },
+      "grid": {
+        "x": 81,
+        "y": 403,
+        "celda_w": 439,
+        "celda_h": 439,
+        "gap_x": 40,
+        "gap_y": 30,
+        "area_h": 0,
+        "centrar_impar": true,
+        "estilo": {
+          "fondo": "#FFFFFF",
+          "borde": "#FED700",
+          "borde_w": 2,
+          "radio": 15,
+          "lineas": null
+        },
+        "elementos": {
+          "foto": {
+            "x": 59,
+            "y": 19,
+            "w": 338,
+            "h": 338,
+            "alinear_h": "centro",
+            "alinear_v": "arriba"
+          },
+          "marca": {
+            "x": 128,
+            "y": 391,
+            "w": 200,
+            "tam": 20,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "color": "#0A063C",
+            "interlineado": 24,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "nombre": {
+            "x": 51,
+            "y": 414,
+            "w": 355,
+            "tam": 18,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "color": "#0A063C",
+            "interlineado": 20,
+            "max_lineas": 2,
+            "alinear": "centro"
+          },
+          "sku": {
+            "x": 128,
+            "y": 432,
+            "w": 200,
+            "tam": 13,
+            "fuente": "HurmeGeometricSans1.otf",
+            "color": "#0A063C",
+            "interlineado": 16,
+            "alinear": "centro",
+            "max_lineas": 1
+          }
+        }
+      },
+      "grid_8": {
+        "x": 64,
+        "y": 340,
+        "celda_w": 456,
+        "celda_h": 375,
+        "gap_x": 40,
+        "gap_y": 15,
+        "area_h": 0,
+        "centrar_impar": true,
+        "estilo": {
+          "fondo": "#FFFFFF",
+          "borde": "#FED700",
+          "borde_w": 2,
+          "radio": 15,
+          "lineas": null
+        },
+        "elementos": {
+          "foto": {
+            "x": 103,
+            "y": 10,
+            "w": 250,
+            "h": 250,
+            "alinear_h": "centro",
+            "alinear_v": "arriba"
+          },
+          "marca": {
+            "x": 14,
+            "y": 296,
+            "w": 200,
+            "tam": 20,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "color": "#0A063C",
+            "interlineado": 24,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "nombre": {
+            "x": 14,
+            "y": 321,
+            "w": 200,
+            "tam": 18,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "color": "#0A063C",
+            "interlineado": 20,
+            "max_lineas": 2,
+            "alinear": "centro"
+          },
+          "sku": {
+            "x": 242,
+            "y": 359,
+            "w": 200,
+            "tam": 13,
+            "fuente": "HurmeGeometricSans1.otf",
+            "color": "#0A063C",
+            "interlineado": 16,
+            "alinear": "centro",
+            "max_lineas": 1
+          }
+        }
+      },
+      "legales": {
+        "x": 64,
+        "y": 1839,
+        "w": 952,
+        "tam": 16,
+        "fuente": "HurmeGeometricSans1.otf",
+        "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
+        "color": "#FFFFFF",
+        "interlineado": 19,
+        "justificar": true
+      }
+    }
+  }
+}

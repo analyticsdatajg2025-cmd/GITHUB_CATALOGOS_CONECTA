@@ -1,0 +1,193 @@
+{
+  "nombre": "CYBER WEEK",
+  "tienda": "EFE",
+  "comentario": "Solo FLYER calibrado; los demás formatos salen con el diseño clásico.",
+  "actualizado": "2026-11-06",
+  "formatos": {
+    "FLYER": {
+      "fecha": {
+        "x": 540,
+        "y": 276,
+        "h": 40,
+        "tam": 23,
+        "fuente": "Poppins-SemiBold.ttf",
+        "pad_x": 20,
+        "alinear": "centro",
+        "relleno": "#FFA002",
+        "borde": null,
+        "borde_w": 0,
+        "radio": 10,
+        "color": "#FFFFFF"
+      },
+      "grid": {
+        "x": 12,
+        "y": 353,
+        "celda_w": 518,
+        "celda_h": 483,
+        "gap_x": 20,
+        "gap_y": 12,
+        "area_h": 1407,
+        "centrar_impar": true,
+        "estilo": {
+          "fondo": null,
+          "borde": null,
+          "borde_w": 2,
+          "radio": 15,
+          "lineas": "#00ACDE"
+        },
+        "elementos": {
+          "foto": {
+            "x": 23,
+            "y": 10,
+            "w": 434,
+            "h": 292,
+            "alinear_h": "centro",
+            "alinear_v": "arriba"
+          },
+          "marca": {
+            "x": 25,
+            "y": 325,
+            "w": 200,
+            "tam": 28,
+            "fuente": "Poppins-Medium.ttf",
+            "color": "#000000",
+            "interlineado": 32,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "nombre": {
+            "x": 25,
+            "y": 353,
+            "w": 200,
+            "tam": 20,
+            "fuente": "Poppins-Medium.ttf",
+            "color": "#000000",
+            "interlineado": 22,
+            "max_lineas": 4,
+            "alinear": "centro"
+          },
+          "sku": {
+            "x": 253,
+            "y": 381,
+            "w": 200,
+            "tam": 15,
+            "fuente": "Poppins-Regular.ttf",
+            "color": "#000000",
+            "interlineado": 18,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "precio": {
+            "x": 345,
+            "y": 325,
+            "alinear": "centro",
+            "tam_simbolo": 28,
+            "tam_numero": 50,
+            "fuente": "Poppins-ExtraBold.ttf",
+            "separacion": 8,
+            "tracking": -2,
+            "simbolo_v": "medio",
+            "color": "#FFFFFF",
+            "simbolo": "S/",
+            "chapa": {
+              "alto": 61,
+              "pad_x": 10,
+              "radio": 15,
+              "color": "#FFA002"
+            }
+          }
+        }
+      },
+      "grid_8": {
+        "x": 65,
+        "y": 350,
+        "celda_w": 475,
+        "celda_h": 340,
+        "gap_x": 20,
+        "gap_y": 12,
+        "area_h": 1407,
+        "centrar_impar": true,
+        "estilo": {
+          "fondo": null,
+          "borde": null,
+          "borde_w": 2,
+          "radio": 15,
+          "lineas": "#00ACDE"
+        },
+        "elementos": {
+          "foto": {
+            "x": 65,
+            "y": 10,
+            "w": 350,
+            "h": 220,
+            "alinear_h": "centro",
+            "alinear_v": "arriba"
+          },
+          "marca": {
+            "x": 25,
+            "y": 235,
+            "w": 200,
+            "tam": 28,
+            "fuente": "Poppins-Medium.ttf",
+            "color": "#000000",
+            "interlineado": 32,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "nombre": {
+            "x": 25,
+            "y": 263,
+            "w": 200,
+            "tam": 20,
+            "fuente": "Poppins-Medium.ttf",
+            "color": "#000000",
+            "interlineado": 22,
+            "max_lineas": 4,
+            "alinear": "centro"
+          },
+          "sku": {
+            "x": 253,
+            "y": 291,
+            "w": 200,
+            "tam": 15,
+            "fuente": "Poppins-Regular.ttf",
+            "color": "#000000",
+            "interlineado": 18,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "precio": {
+            "x": 345,
+            "y": 235,
+            "alinear": "centro",
+            "tam_simbolo": 26,
+            "tam_numero": 45,
+            "fuente": "Poppins-ExtraBold.ttf",
+            "separacion": 8,
+            "tracking": -2,
+            "simbolo_v": "medio",
+            "color": "#FFFFFF",
+            "simbolo": "S/",
+            "chapa": {
+              "alto": 54,
+              "pad_x": 10,
+              "radio": 15,
+              "color": "#FFA002"
+            }
+          }
+        }
+      },
+      "legales": {
+        "x": 70,
+        "y": 1835,
+        "w": 940,
+        "tam": 12,
+        "fuente": "Poppins-Regular.ttf",
+        "fuente_negrita": "Poppins-SemiBold.ttf",
+        "color": "#FFFFFF",
+        "interlineado": 15,
+        "justificar": true
+      }
+    }
+  }
+}

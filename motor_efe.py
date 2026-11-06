@@ -1,3 +1,5 @@
+# Motor de piezas de EFE. No se ejecuta solo: lo usa main.py.
+# (Antes era el archivo Diseño_EFE.txt que se pegaba en main.py.)
 # Importación de librerías para sistema, datos, red, imágenes y texto
 import os
 import json
@@ -121,17 +123,8 @@ LAYOUT_EFERTON_EXTRA = {
 # ======================================================================
 # FORZAR REGENERACION
 # ======================================================================
-# Normalmente una pieza se salta si ya esta en 'Resultados' Y su archivo existe
-# en output/. Cuando cambias las coordenadas de una campaña eso no basta: el
-# archivo viejo sigue ahi y la pieza nunca se vuelve a dibujar.
-# Pon aqui el "Tipo de diseño" (en MAYUSCULAS) para regenerarlo SIEMPRE.
-# Deja el set vacio ( set() ) cuando termines, o cada corrida rehara todo.
-FORZAR_REGENERAR = {
-    "CYBER EFE",
-    "EFERTON DE LA SEMANA",
-    "KV COMPUTO EFE",
-    "PRECIO IRRESISTIBLE",
-}
+# Ya no se edita aqui: al correr, lo elegido SIEMPRE se vuelve a dibujar
+# (opcion "solo_faltantes" para saltar lo que ya existe). Ver main.py.
 
 # ======================================================================
 # AJUSTES POR CAMPAÑA  (mover elementos sin tocar el resto del codigo)
@@ -417,429 +410,40 @@ def get_sheets_data():
     return data, res_sheet, viejos
 
 # ======================================================================
-# LAYOUTS  (pega aqui los bloques que copias del Calibrador Conecta)
+# DISEÑOS  (coordenadas hechas en el Calibrador Conecta)
 # ======================================================================
-# Ejemplo:
-# LAYOUTS = {
-#     "CYBER WEEK": {
-#         "PPL": {...},
-#         "FLYER": {...},
-#     },
-# }
-# Una campaña/formato que NO este aqui se sigue dibujando como siempre
-# (coordenadas fijas + AJUSTES_CAMPANA).
-LAYOUTS = {
-    # Calibrador Conecta, mismas coordenadas que CYBER LC (fuentes Poppins, texto blanco)
-    "CYBER EFE": {
-        "PPL": {
-            "foto": {
-                "x": 214,
-                "y": 304,
-                "w": 652,
-                "h": 500,
-                "alinear_h": "centro",
-                "alinear_v": "arriba"
-            },
-            "marca": {
-                "x": 315,
-                "y": 850,
-                "w": 450,
-                "tam": 43,
-                "fuente": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 48,
-                "max_lineas": 1,
-                "alinear": "centro"
-            },
-            "nombre": {
-                "x": 305,
-                "y": 880,
-                "w": 470,
-                "tam": 23,
-                "fuente": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 30,
-                "max_lineas": 2,
-                "alinear": "centro"
-            },
-            "sku": {
-                "x": 440,
-                "y": 906,
-                "w": 200,
-                "tam": 14,
-                "fuente": "Poppins-Regular.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 17,
-                "alinear": "centro",
-                "max_lineas": 1
-            },
-            "legales": {
-                "x": 50,
-                "y": 1019,
-                "w": 980,
-                "tam": 11,
-                "fuente": "Poppins-Regular.ttf",
-                "fuente_negrita": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 14,
-                "justificar": True
-            },
-            "imagenes": [
-                {
-                    "etiqueta": "cta-EFE",
-                    "archivo": "cta-EFE.png",
-                    "x": 381,
-                    "y": 927,
-                    "w": 319,
-                    "h": 59
-                }
-            ]
-        },
-        "STORY": {
-            "foto": {
-                "x": 63,
-                "y": 447,
-                "w": 954,
-                "h": 954,
-                "alinear_h": "centro",
-                "alinear_v": "arriba"
-            },
-            "marca": {
-                "x": 310,
-                "y": 1500,
-                "w": 460,
-                "tam": 53,
-                "fuente": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 60,
-                "max_lineas": 1,
-                "alinear": "centro"
-            },
-            "nombre": {
-                "x": 164,
-                "y": 1558,
-                "w": 753,
-                "tam": 32,
-                "fuente": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 40,
-                "max_lineas": 2,
-                "alinear": "centro"
-            },
-            "sku": {
-                "x": 441,
-                "y": 1606,
-                "w": 200,
-                "tam": 22,
-                "fuente": "Poppins-Regular.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 22,
-                "alinear": "centro",
-                "max_lineas": 1
-            },
-            "legales": {
-                "x": 65,
-                "y": 1807,
-                "w": 950,
-                "tam": 12,
-                "fuente": "Poppins-Regular.ttf",
-                "fuente_negrita": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 15,
-                "justificar": True
-            },
-            "imagenes": [
-                {
-                    "etiqueta": "cta-EFE",
-                    "archivo": "cta-EFE.png",
-                    "x": 381,
-                    "y": 1651,
-                    "w": 319,
-                    "h": 59
-                }
-            ]
-        },
-        "DISPLAY": {
-            "foto": {
-                "x": 480,
-                "y": 20,
-                "w": 444,
-                "h": 444,
-                "alinear_h": "centro",
-                "alinear_v": "arriba"
-            },
-            "marca": {
-                "x": 75,
-                "y": 233,
-                "w": 300,
-                "tam": 34,
-                "fuente": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 40,
-                "alinear": "centro",
-                "max_lineas": 1
-            },
-            "nombre": {
-                "x": 32,
-                "y": 271,
-                "w": 387,
-                "tam": 20,
-                "fuente": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 27,
-                "max_lineas": 2,
-                "alinear": "centro"
-            },
-            "sku": {
-                "x": 125,
-                "y": 312,
-                "w": 200,
-                "tam": 13,
-                "fuente": "Poppins-Regular.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 16,
-                "alinear": "centro",
-                "max_lineas": 1
-            },
-            "legales": {
-                "x": 40,
-                "y": 497,
-                "w": 920,
-                "tam": 7,
-                "fuente": "Poppins-Regular.ttf",
-                "fuente_negrita": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 9,
-                "justificar": True
-            },
-            "imagenes": [
-                {
-                    "etiqueta": "cta-EFE",
-                    "archivo": "cta-EFE.png",
-                    "x": 129,
-                    "y": 362,
-                    "w": 193,
-                    "h": 36
-                }
-            ]
-        },
-        "FLYER": {
-            "fecha": {
-                "x": 540,
-                "y": 248,
-                "h": 50,
-                "tam": 24,
-                "fuente": "Poppins-SemiBold.ttf",
-                "pad_x": 17,
-                "alinear": "centro",
-                "relleno": None,
-                "borde": "#FFFFFF",
-                "borde_w": 3,
-                "radio": 10,
-                "color": "#FFFFFF"
-            },
-            "grid": {
-                "x": 64,
-                "y": 340,
-                "celda_w": 456,
-                "celda_h": 456,
-                "gap_x": 40,
-                "gap_y": 30,
-                "area_h": 0,
-                "centrar_impar": True,
-                "estilo": {
-                    "fondo": "#FFFFFF",
-                    "borde": "#FED700",
-                    "borde_w": 2,
-                    "radio": 15,
-                    "lineas": None
-                },
-                "elementos": {
-                    "foto": {
-                        "x": 59,
-                        "y": 19,
-                        "w": 338,
-                        "h": 338,
-                        "alinear_h": "centro",
-                        "alinear_v": "arriba"
-                    },
-                    "marca": {
-                        "x": 128,
-                        "y": 391,
-                        "w": 200,
-                        "tam": 20,
-                        "fuente": "Poppins-SemiBold.ttf",
-                        "color": "#0A063C",
-                        "interlineado": 24,
-                        "alinear": "centro",
-                        "max_lineas": 1
-                    },
-                    "nombre": {
-                        "x": 51,
-                        "y": 414,
-                        "w": 355,
-                        "tam": 18,
-                        "fuente": "Poppins-SemiBold.ttf",
-                        "color": "#0A063C",
-                        "interlineado": 20,
-                        "max_lineas": 2,
-                        "alinear": "centro"
-                    },
-                    "sku": {
-                        "x": 128,
-                        "y": 432,
-                        "w": 200,
-                        "tam": 13,
-                        "fuente": "Poppins-Regular.ttf",
-                        "color": "#0A063C",
-                        "interlineado": 16,
-                        "alinear": "centro",
-                        "max_lineas": 1
-                    }
-                }
-            },
-            "grid_8": {
-                "x": 64,
-                "y": 340,
-                "celda_w": 456,
-                "celda_h": 375,
-                "gap_x": 40,
-                "gap_y": 15,
-                "area_h": 0,
-                "centrar_impar": True,
-                "estilo": {
-                    "fondo": "#FFFFFF",
-                    "borde": "#FED700",
-                    "borde_w": 2,
-                    "radio": 15,
-                    "lineas": None
-                },
-                "elementos": {
-                    "foto": {
-                        "x": 103,
-                        "y": 10,
-                        "w": 250,
-                        "h": 250,
-                        "alinear_h": "centro",
-                        "alinear_v": "arriba"
-                    },
-                    "marca": {
-                        "x": 14,
-                        "y": 296,
-                        "w": 200,
-                        "tam": 20,
-                        "fuente": "Poppins-SemiBold.ttf",
-                        "color": "#0A063C",
-                        "interlineado": 24,
-                        "alinear": "centro",
-                        "max_lineas": 1
-                    },
-                    "nombre": {
-                        "x": 14,
-                        "y": 321,
-                        "w": 200,
-                        "tam": 18,
-                        "fuente": "Poppins-SemiBold.ttf",
-                        "color": "#0A063C",
-                        "interlineado": 20,
-                        "max_lineas": 2,
-                        "alinear": "centro"
-                    },
-                    "sku": {
-                        "x": 242,
-                        "y": 359,
-                        "w": 200,
-                        "tam": 13,
-                        "fuente": "Poppins-Regular.ttf",
-                        "color": "#0A063C",
-                        "interlineado": 16,
-                        "alinear": "centro",
-                        "max_lineas": 1
-                    }
-                }
-            },
-            "legales": {
-                "x": 64,
-                "y": 1839,
-                "w": 952,
-                "tam": 16,
-                "fuente": "Poppins-Regular.ttf",
-                "fuente_negrita": "Poppins-SemiBold.ttf",
-                "color": "#FFFFFF",
-                "interlineado": 19,
-                "justificar": True
-            }
-        }
-    },
-    "CYBER WEEK": {
-        "FLYER": {
-            "fecha": {"x": 540, "y": 276, "h": 40, "tam": 23, "fuente": "Poppins-SemiBold.ttf", "pad_x": 20, "alinear": "centro", "relleno": "#FFA002", "borde": None, "borde_w": 0, "radio": 10, "color": "#FFFFFF"},
-            "grid": {
-                "x": 12,
-                "y": 353,
-                "celda_w": 518,
-                "celda_h": 483,
-                "gap_x": 20,
-                "gap_y": 12,
-                "area_h": 1407,
-                "centrar_impar": True,
-                "estilo": {"fondo": None, "borde": None, "borde_w": 2, "radio": 15, "lineas": "#00ACDE"},
-                "elementos": {
-                    "foto": {"x": 23, "y": 10, "w": 434, "h": 292, "alinear_h": "centro", "alinear_v": "arriba"},
-                    "marca": {"x": 25, "y": 325, "w": 200, "tam": 28, "fuente": "Poppins-Medium.ttf", "color": "#000000", "interlineado": 32, "alinear": "centro", "max_lineas": 1},
-                    "nombre": {"x": 25, "y": 353, "w": 200, "tam": 20, "fuente": "Poppins-Medium.ttf", "color": "#000000", "interlineado": 22, "max_lineas": 4, "alinear": "centro"},
-                    "sku": {"x": 253, "y": 381, "w": 200, "tam": 15, "fuente": "Poppins-Regular.ttf", "color": "#000000", "interlineado": 18, "alinear": "centro", "max_lineas": 1},
-                    "precio": {
-                        "x": 345,
-                        "y": 325,
-                        "alinear": "centro",
-                        "tam_simbolo": 28,
-                        "tam_numero": 50,
-                        "fuente": "Poppins-ExtraBold.ttf",
-                        "separacion": 8,
-                        "tracking": -2,
-                        "simbolo_v": "medio",
-                        "color": "#FFFFFF",
-                        "simbolo": "S/",
-                        "chapa": {"alto": 61, "pad_x": 10, "radio": 15, "color": "#FFA002"},
-                    },
-                },
-            },
-            "grid_8": {
-                "x": 65,
-                "y": 350,
-                "celda_w": 475,
-                "celda_h": 340,
-                "gap_x": 20,
-                "gap_y": 12,
-                "area_h": 1407,
-                "centrar_impar": True,
-                "estilo": {"fondo": None, "borde": None, "borde_w": 2, "radio": 15, "lineas": "#00ACDE"},
-                "elementos": {
-                    "foto": {"x": 65, "y": 10, "w": 350, "h": 220, "alinear_h": "centro", "alinear_v": "arriba"},
-                    "marca": {"x": 25, "y": 235, "w": 200, "tam": 28, "fuente": "Poppins-Medium.ttf", "color": "#000000", "interlineado": 32, "alinear": "centro", "max_lineas": 1},
-                    "nombre": {"x": 25, "y": 263, "w": 200, "tam": 20, "fuente": "Poppins-Medium.ttf", "color": "#000000", "interlineado": 22, "max_lineas": 4, "alinear": "centro"},
-                    "sku": {"x": 253, "y": 291, "w": 200, "tam": 15, "fuente": "Poppins-Regular.ttf", "color": "#000000", "interlineado": 18, "alinear": "centro", "max_lineas": 1},
-                    "precio": {
-                        "x": 345,
-                        "y": 235,
-                        "alinear": "centro",
-                        "tam_simbolo": 26,
-                        "tam_numero": 45,
-                        "fuente": "Poppins-ExtraBold.ttf",
-                        "separacion": 8,
-                        "tracking": -2,
-                        "simbolo_v": "medio",
-                        "color": "#FFFFFF",
-                        "simbolo": "S/",
-                        "chapa": {"alto": 54, "pad_x": 10, "radio": 15, "color": "#FFA002"},
-                    },
-                },
-            },
-            "legales": {"x": 70, "y": 1835, "w": 940, "tam": 12, "fuente": "Poppins-Regular.ttf", "fuente_negrita": "Poppins-SemiBold.ttf", "color": "#FFFFFF", "interlineado": 15, "justificar": True},
-        },
-    },
-}
+# Ya no se pegan aqui: viven en DISENOS/<TIENDA>/<nombre>.json, uno por diseño,
+# y el Calibrador los guarda directo en el repo. Cada archivo trae:
+#   {"nombre": ..., "tienda": ..., "comentario": ..., "formatos": {"PPL": {...}, "STORY": {...}, ...}}
+# Una campaña usa el diseño que se llama igual que su "Tipo de diseño" del Sheet,
+# salvo que al correr se elija otro (DISENO_FORZADO). Si no hay diseño para esa
+# campaña/formato, se dibuja como siempre (coordenadas fijas + AJUSTES_CAMPANA).
+DISENO_FORZADO = ""   # lo fija main.py con la opcion elegida al correr
+
+def cargar_disenos(tienda):
+    """{NOMBRE EN MAYUSCULAS: {formato: layout}} con todos los .json de DISENOS/<tienda>/."""
+    carpeta = os.path.join("DISENOS", tienda)
+    disenos = {}
+    if os.path.isdir(carpeta):
+        for archivo in sorted(os.listdir(carpeta)):
+            if not archivo.lower().endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(carpeta, archivo), encoding="utf-8") as fh:
+                    d = json.load(fh)
+            except Exception as e:
+                print(f"⚠️  No se pudo leer el diseño {carpeta}/{archivo}: {e}")
+                continue
+            nombre = str(d.get("nombre") or archivo[:-5]).strip().upper()
+            disenos[nombre] = d.get("formatos", {})
+    return disenos
+
+LAYOUTS = cargar_disenos('EFE')
+
+def layout_de(tipo, formato):
+    """Layout del formato para esta campaña, o None para dibujar como siempre."""
+    nombre = (DISENO_FORZADO or str(tipo)).strip().upper()
+    return LAYOUTS.get(nombre, {}).get(formato)
 
 # ======================================================================
 # MOTOR DE LAYOUT  (diseños hechos en el Calibrador Conecta)
@@ -1234,7 +838,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
     except: f_m = f_p = f_pv = f_ps = f_s_ind = f_l = f_f = ImageFont.load_default()
 
     # LAYOUTS: si esta campaña/formato fue diseñada en el Calibrador, se dibuja con el motor
-    _lay = LAYOUTS.get(str(tipo).strip().upper(), {}).get(formato)
+    _lay = layout_de(tipo, formato)
     if _lay:
         dibujar_layout(img, draw, _lay, data_input, path_fonts, path_fondos)
     elif formato == "FLYER":
@@ -1486,88 +1090,3 @@ def resolver_columna(df, nombre_buscado):
         if c.strip().lower() == objetivo:
             return c
     return None
-
-# --- INICIO DE EJECUCIÓN (OPTIMIZADO PARA EVITAR ERROR 429) ---
-data, res_sheet, viejos = get_sheets_data()
-
-# FIX: cada script solo debe procesar sus propias filas, nunca las de la otra marca
-col_tienda = resolver_columna(data, 'Tienda')
-if col_tienda is None:
-    print(f"❌ No se encontró una columna 'Tienda' en Hoja 1. Columnas disponibles: {list(data.columns)}")
-    raise SystemExit(1)
-data = data[data[col_tienda].astype(str).str.strip().str.upper() == 'EFE'].reset_index(drop=True)
-print(f"DEBUG: Filas EFE detectadas (columna real: '{col_tienda}'): {len(data)}")
-
-def hay_que_generar(llave, nombre_archivo, tipo_camp=""):
-    """True si la pieza falta: o no esta registrada en 'Resultados', o su archivo
-    ya no existe en output/ (p.ej. despues de una limpieza del repo), o su campaña
-    esta en FORZAR_REGENERAR.
-    AJUSTE: antes solo miraba el Sheet, asi que si se borraban las imagenes el
-    script las saltaba igual y todos los links quedaban en 404."""
-    if str(tipo_camp).strip().upper() in FORZAR_REGENERAR:
-        print(f"🔁 {llave}: campaña en FORZAR_REGENERAR, se vuelve a dibujar.")
-        return True
-    if llave not in viejos:
-        return True
-    if not os.path.exists(os.path.join("output", nombre_archivo)):
-        print(f"♻️  {llave} esta en Resultados pero falta output/{nombre_archivo}. Se regenera.")
-        return True
-    return False
-
-os.makedirs('output', exist_ok=True)
-h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
-filas_para_google = []
-filas_a_actualizar = []   # (numero de fila en Resultados, valores) de piezas regeneradas
-
-# Ciclo 1: Productos Individuales
-for idx, row in data.iterrows():
-    f_v = str(row['Formato']).upper().strip()
-    if f_v in ["FLYER", "", "0"]: continue
-    tienda = str(row.get('Tienda', 'LC')).strip().upper()
-    sku_val = str(row['SKU']).replace("/", "-").replace("\\", "-")
-    llave = f"{sku_val}_{f_v}_{tienda}_EFE".upper()
-    archivo = ruta_salida(tienda, row)
-    _era_nueva = llave not in viejos
-    if hay_que_generar(llave, archivo, row['Tipo de diseño']):
-        print(f"🎨 Generando: {llave}")
-        url = generar_diseno(row)
-        # Si la llave ya existia, solo se repone el archivo: la fila del Sheet
-        # ya apunta a esa URL, asi que no se duplica el registro.
-        if url:
-            # Orden: Fecha | ID | Tienda | Diseño | Formato | Color | Link Imagen | Link web
-            lw = link_web(tienda, row['SKU'])
-            fila = [h_lima, llave, tienda, row['Tipo de diseño'], f_v, "EFE", url, lw]
-            # AJUSTE: si la pieza ya estaba en Resultados se actualiza ESA fila (link nuevo)
-            if _era_nueva: filas_para_google.append(fila)
-            else: filas_a_actualizar.append((viejos[llave], fila))
-
-# Ciclo 2: Flyers
-fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
-for id_f, group in fly_g.groupby('ID_Flyer'):
-    if str(id_f) in ["0", "0.0", ""]: continue
-    id_limpio = str(id_f).replace("/", "-").replace("\\", "-")
-    llave = f"{id_limpio}_FLYER_EFE".upper()
-    # El archivo del flyer se nombra con el SKU del PRIMER producto del grupo
-    # (asi lo guarda generar_diseno), no con el ID_Flyer.
-    archivo = ruta_salida("EFE", group)
-    _era_nueva = llave not in viejos
-    if hay_que_generar(llave, archivo, group.iloc[0]['Tipo de diseño']):
-        print(f"🎨 Generando Flyer: {llave}")
-        url = generar_diseno(group)
-        if url:
-            lw = link_web("EFE", group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
-            fila = [h_lima, llave, "EFE", group.iloc[0]['Tipo de diseño'], "FLYER", "EFE", url, lw]
-            if _era_nueva: filas_para_google.append(fila)
-            else: filas_a_actualizar.append((viejos[llave], fila))
-
-# --- ESCRITURA FINAL MASIVA (SOLO 1 PETICIÓN) ---
-if filas_para_google:
-    res_sheet.append_rows(filas_para_google)
-    print(f"✅ Éxito: Se registraron {len(filas_para_google)} piezas nuevas.")
-# AJUSTE: piezas que ya estaban en Resultados -> se actualiza su misma fila (1 sola peticion)
-if filas_a_actualizar:
-    res_sheet.batch_update([{"range": f"A{n}:H{n}", "values": [fila]} for n, fila in filas_a_actualizar])
-    print(f"✅ Se actualizaron {len(filas_a_actualizar)} filas existentes en Resultados (link nuevo).")
-else:
-    print("No se generaron piezas nuevas. Creando placeholder.")
-    with open("output/placeholder.txt", "w") as f: f.write(f"Sin cambios: {h_lima}")
