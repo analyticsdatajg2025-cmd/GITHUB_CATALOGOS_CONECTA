@@ -1,18 +1,63 @@
 name: Catalogo Conecta Automation
 
+# Ya no corre solo cada dia: se corre a mano (Actions -> Run workflow) o desde el Calibrador.
 on:
-  schedule:
-    - cron: "0 13 * * *" # 8:00 AM hora de Lima
   workflow_dispatch:
+    inputs:
+      programa:
+        description: "Programa"
+        type: choice
+        options:
+          - "Nuevo (LC y EFE)"
+          - "Clasico LC"
+          - "Clasico EFE"
+        default: "Nuevo (LC y EFE)"
+      tiendas:
+        description: "Tiendas"
+        type: choice
+        options:
+          - "LC y EFE"
+          - "LC"
+          - "EFE"
+        default: "LC y EFE"
+      diseno_lc:
+        description: "Diseño LC (vacio = el de la campaña del Sheet)"
+        required: false
+        default: ""
+      diseno_efe:
+        description: "Diseño EFE (vacio = el de la campaña del Sheet)"
+        required: false
+        default: ""
+      formatos:
+        description: "Formatos separados por coma: PPL, STORY, DISPLAY, FLYER (vacio = todos)"
+        required: false
+        default: ""
+      skus:
+        description: "SKUs separados por coma (vacio = todos)"
+        required: false
+        default: ""
+      marcas:
+        description: "Marcas separadas por coma (vacio = todas)"
+        required: false
+        default: ""
+      solo_faltantes:
+        description: "Solo lo que falta (no rehacer lo que ya existe)"
+        type: boolean
+        default: false
+
+# Nunca dos corridas a la vez: la segunda espera a que termine la primera.
+concurrency:
+  group: catalogo-conecta
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -22,26 +67,31 @@ jobs:
       - name: Run Script
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        run: python main.py
+          PROGRAMA: ${{ inputs.programa }}
+          TIENDAS: ${{ inputs.tiendas == 'LC y EFE' && 'LC,EFE' || inputs.tiendas }}
+          DISENO_LC: ${{ inputs.diseno_lc }}
+          DISENO_EFE: ${{ inputs.diseno_efe }}
+          FORMATOS: ${{ inputs.formatos }}
+          SKUS: ${{ inputs.skus }}
+          MARCAS: ${{ inputs.marcas }}
+          SOLO_FALTANTES: ${{ inputs.solo_faltantes }}
+        run: |
+          case "$PROGRAMA" in
+            "Clasico LC")  python "DISEÑO_LC_CLASICO.txt" ;;
+            "Clasico EFE") python "DISEÑO_EFE_CLASICO.txt" ;;
+            *)             python main.py ;;
+          esac
 
+      # Aunque alguna pieza falle, las que si salieron se suben.
       - name: Push Designs
+        if: success() || failure()
         run: |
           git config --global user.name "Elias-Martech-Bot"
           git config --global user.email "analytics.data.jg.2025@gmail.com"
-          
-          # 1. Agregamos todo lo que el script creó (fotos o placeholder)
-          git add .
-          
-          # 2. Guardamos eso en un 'stash' para limpiar el camino
+          git add output last_run.txt
           git stash
-          
-          # 3. Bajamos lo último de GitHub
           git pull origin main --rebase
-          
-          # 4. Devolvemos las fotos/archivos
           git stash pop || echo "No hay cambios"
-          
-          # 5. Volvemos a agregar y subimos
-          git add .
+          git add output last_run.txt
           git commit -m "Auto-generación de piezas - $(date -d '5 hours ago' '+%Y-%m-%d %H:%M')" || echo "Sin cambios"
           git push origin main

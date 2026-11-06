@@ -1,0 +1,251 @@
+{
+  "nombre": "CYBER WEEK",
+  "tienda": "LC",
+  "comentario": "Con precio. Solo PPL y FLYER calibrados; STORY y DISPLAY salen con el diseño clásico.",
+  "actualizado": "2026-11-06",
+  "formatos": {
+    "PPL": {
+      "foto": {
+        "x": 244,
+        "y": 428,
+        "w": 593,
+        "h": 458,
+        "alinear_h": "centro",
+        "alinear_v": "medio"
+      },
+      "marca": {
+        "x": 164,
+        "y": 953,
+        "w": 450,
+        "tam": 43,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 48,
+        "max_lineas": 1,
+        "alinear": "izq"
+      },
+      "nombre": {
+        "x": 164,
+        "y": 990,
+        "w": 470,
+        "tam": 23,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 30,
+        "max_lineas": 2,
+        "alinear": "izq"
+      },
+      "sku": {
+        "x": 690,
+        "y": 1001,
+        "w": 200,
+        "tam": 14,
+        "fuente": "HurmeGeometricSans1.otf",
+        "color": "#000000",
+        "interlineado": 17,
+        "alinear": "centro",
+        "max_lineas": 1
+      },
+      "precio": {
+        "x": 790,
+        "y": 968,
+        "alinear": "centro",
+        "tam_simbolo": 36,
+        "tam_numero": 85,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "separacion": 15,
+        "tracking": 0,
+        "simbolo_v": "base",
+        "color": "#000000",
+        "simbolo": "S/",
+        "chapa": null
+      },
+      "legales": {
+        "x": 50,
+        "y": 1036,
+        "w": 980,
+        "tam": 11,
+        "fuente": "HurmeGeometricSans1.otf",
+        "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
+        "color": "#000000",
+        "interlineado": 14,
+        "justificar": true
+      }
+    },
+    "FLYER": {
+      "fecha": {
+        "x": 540,
+        "y": 316,
+        "h": 50,
+        "tam": 24,
+        "fuente": "HurmeGeometricSans1 Bold.otf",
+        "pad_x": 17,
+        "alinear": "centro",
+        "relleno": null,
+        "borde": "#FFFFFF",
+        "borde_w": 3,
+        "radio": 10,
+        "color": "#FFFFFF"
+      },
+      "grid": {
+        "x": 84,
+        "y": 385,
+        "celda_w": 436,
+        "celda_h": 443,
+        "gap_x": 40,
+        "gap_y": 30,
+        "area_h": 0,
+        "centrar_impar": true,
+        "estilo": {
+          "fondo": "#FFFFFF",
+          "borde": "#FED700",
+          "borde_w": 2,
+          "radio": 15,
+          "lineas": null
+        },
+        "elementos": {
+          "foto": {
+            "x": 59,
+            "y": 20,
+            "w": 338,
+            "h": 338,
+            "alinear_h": "centro",
+            "alinear_v": "arriba"
+          },
+          "marca": {
+            "x": 14,
+            "y": 377,
+            "w": 200,
+            "tam": 20,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "color": "#0A063C",
+            "interlineado": 24,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "nombre": {
+            "x": 14,
+            "y": 402,
+            "w": 200,
+            "tam": 18,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "color": "#0A063C",
+            "interlineado": 20,
+            "max_lineas": 2,
+            "alinear": "centro"
+          },
+          "sku": {
+            "x": 232,
+            "y": 434,
+            "w": 200,
+            "tam": 13,
+            "fuente": "HurmeGeometricSans1.otf",
+            "color": "#0A063C",
+            "interlineado": 16,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "precio": {
+            "x": 332,
+            "y": 412,
+            "alinear": "centro",
+            "tam_simbolo": 24,
+            "tam_numero": 60,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "separacion": 8,
+            "tracking": 0,
+            "simbolo_v": "base",
+            "color": "#0A063C",
+            "simbolo": "S/",
+            "chapa": null
+          }
+        }
+      },
+      "grid_8": {
+        "x": 64,
+        "y": 340,
+        "celda_w": 456,
+        "celda_h": 375,
+        "gap_x": 40,
+        "gap_y": 15,
+        "area_h": 0,
+        "centrar_impar": true,
+        "estilo": {
+          "fondo": "#FFFFFF",
+          "borde": "#FED700",
+          "borde_w": 2,
+          "radio": 15,
+          "lineas": null
+        },
+        "elementos": {
+          "foto": {
+            "x": 103,
+            "y": 10,
+            "w": 250,
+            "h": 250,
+            "alinear_h": "centro",
+            "alinear_v": "arriba"
+          },
+          "marca": {
+            "x": 14,
+            "y": 296,
+            "w": 200,
+            "tam": 20,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "color": "#0A063C",
+            "interlineado": 24,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "nombre": {
+            "x": 14,
+            "y": 321,
+            "w": 200,
+            "tam": 18,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "color": "#0A063C",
+            "interlineado": 20,
+            "max_lineas": 2,
+            "alinear": "centro"
+          },
+          "sku": {
+            "x": 242,
+            "y": 359,
+            "w": 200,
+            "tam": 13,
+            "fuente": "HurmeGeometricSans1.otf",
+            "color": "#0A063C",
+            "interlineado": 16,
+            "alinear": "centro",
+            "max_lineas": 1
+          },
+          "precio": {
+            "x": 342,
+            "y": 339,
+            "alinear": "centro",
+            "tam_simbolo": 24,
+            "tam_numero": 60,
+            "fuente": "HurmeGeometricSans1 Bold.otf",
+            "separacion": 8,
+            "tracking": 0,
+            "simbolo_v": "base",
+            "color": "#0A063C",
+            "simbolo": "S/",
+            "chapa": null
+          }
+        }
+      },
+      "legales": {
+        "x": 64,
+        "y": 1829,
+        "w": 952,
+        "tam": 16,
+        "fuente": "HurmeGeometricSans1.otf",
+        "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
+        "color": "#FFFFFF",
+        "interlineado": 19,
+        "justificar": true
+      }
+    }
+  }
+}

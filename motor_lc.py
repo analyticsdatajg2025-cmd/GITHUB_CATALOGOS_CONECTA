@@ -1,3 +1,5 @@
+# Motor de piezas de LC. No se ejecuta solo: lo usa main.py.
+# (Antes era el archivo DISEÑO_LC.txt que se pegaba en main.py.)
 import os
 import json
 import requests
@@ -160,16 +162,8 @@ AJUSTES_CAMPANA = {
 # ======================================================================
 # FORZAR REGENERACION
 # ======================================================================
-# Normalmente una pieza se salta si ya esta en 'Resultados' Y su archivo existe
-# en output/. Cuando cambias las coordenadas de una campaña eso no basta: el
-# archivo viejo sigue ahi y la pieza nunca se vuelve a dibujar.
-# Pon aqui el "Tipo de diseño" (en MAYUSCULAS) para regenerarlo SIEMPRE.
-# Deja el set vacio ( set() ) cuando termines, o cada corrida rehara todo.
-FORZAR_REGENERAR = {
-    "CYBER LC",
-    "KV COMPUTO LC",
-    "DSCTOS POWER",
-}
+# Ya no se edita aqui: al correr, lo elegido SIEMPRE se vuelve a dibujar
+# (opcion "solo_faltantes" para saltar lo que ya existe). Ver main.py.
 
 # ======================================================================
 # FOTOS NITIDAS
@@ -291,235 +285,40 @@ def get_sheets_data():
     return data, res_sheet, viejos
 
 # ======================================================================
-# LAYOUTS  (pega aqui los bloques que copias del Calibrador Conecta)
+# DISEÑOS  (coordenadas hechas en el Calibrador Conecta)
 # ======================================================================
-# Ejemplo:
-# LAYOUTS = {
-#     "CYBER WEEK": {
-#         "PPL": {...},
-#         "FLYER": {...},
-#     },
-# }
-# Una campaña/formato que NO este aqui se sigue dibujando como siempre
-# (coordenadas fijas + AJUSTES_CAMPANA).
-LAYOUTS = {
-    # Calibrador Conecta, campaña sin precio con boton cta-LC.png
-    # Pegar dentro de LAYOUTS = { ... } en el script de LC
-# Diseño base: LC
-"CYBER LC": {
-    "PPL": {
-        "foto": {"x": 214, "y": 304, "w": 652, "h": 500, "alinear_h": "centro", "alinear_v": "arriba"},
-        "marca": {"x": 315, "y": 850, "w": 450, "tam": 43, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 48, "max_lineas": 1, "alinear": "centro"},
-        "nombre": {"x": 305, "y": 880, "w": 470, "tam": 23, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 30, "max_lineas": 2, "alinear": "centro"},
-        "sku": {"x": 440, "y": 906, "w": 200, "tam": 14, "fuente": "HurmeGeometricSans1.otf", "color": "#000000", "interlineado": 17, "alinear": "centro", "max_lineas": 1},
-        "legales": {
-            "x": 50,
-            "y": 1019,
-            "w": 980,
-            "tam": 11,
-            "fuente": "HurmeGeometricSans1.otf",
-            "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
-            "color": "#000000",
-            "interlineado": 14,
-            "justificar": True,
-        },
-        "imagenes": [
-            {"etiqueta": "cta-LC", "archivo": "cta-LC.png", "x": 381, "y": 927, "w": 319, "h": 59},
-        ],
-    },
-    "STORY": {
-        "foto": {"x": 63, "y": 447, "w": 954, "h": 954, "alinear_h": "centro", "alinear_v": "arriba"},
-        "marca": {"x": 310, "y": 1500, "w": 460, "tam": 53, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 60, "max_lineas": 1, "alinear": "centro"},
-        "nombre": {"x": 164, "y": 1558, "w": 753, "tam": 32, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 40, "max_lineas": 2, "alinear": "centro"},
-        "sku": {"x": 441, "y": 1606, "w": 200, "tam": 22, "fuente": "HurmeGeometricSans1.otf", "color": "#000000", "interlineado": 22, "alinear": "centro", "max_lineas": 1},
-        "legales": {
-            "x": 65,
-            "y": 1807,
-            "w": 950,
-            "tam": 12,
-            "fuente": "HurmeGeometricSans1.otf",
-            "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
-            "color": "#000000",
-            "interlineado": 15,
-            "justificar": True,
-        },
-        "imagenes": [
-            {"etiqueta": "cta-LC", "archivo": "cta-LC.png", "x": 381, "y": 1651, "w": 319, "h": 59},
-        ],
-    },
-    "DISPLAY": {
-        "foto": {"x": 480, "y": 20, "w": 444, "h": 444, "alinear_h": "centro", "alinear_v": "arriba"},
-        "marca": {"x": 75, "y": 233, "w": 300, "tam": 34, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 40, "alinear": "centro", "max_lineas": 1},
-        "nombre": {"x": 32, "y": 271, "w": 387, "tam": 20, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 27, "max_lineas": 2, "alinear": "centro"},
-        "sku": {"x": 125, "y": 312, "w": 200, "tam": 13, "fuente": "HurmeGeometricSans1.otf", "color": "#000000", "interlineado": 16, "alinear": "centro", "max_lineas": 1},
-        "legales": {
-            "x": 40,
-            "y": 497,
-            "w": 920,
-            "tam": 7,
-            "fuente": "HurmeGeometricSans1.otf",
-            "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
-            "color": "#000000",
-            "interlineado": 9,
-            "justificar": True,
-        },
-        "imagenes": [
-            {"etiqueta": "cta-LC", "archivo": "cta-LC.png", "x": 129, "y": 362, "w": 193, "h": 36},
-        ],
-    },
-    "FLYER": {
-        "fecha": {
-            "x": 540,
-            "y": 312,
-            "h": 50,
-            "tam": 24,
-            "fuente": "HurmeGeometricSans1 Bold.otf",
-            "pad_x": 17,
-            "alinear": "centro",
-            "relleno": None,
-            "borde": "#FFFFFF",
-            "borde_w": 3,
-            "radio": 10,
-            "color": "#FFFFFF",
-        },
-        "grid": {
-            "x": 81,
-            "y": 403,
-            "celda_w": 439,
-            "celda_h": 439,
-            "gap_x": 40,
-            "gap_y": 30,
-            "area_h": 0,
-            "centrar_impar": True,
-            "estilo": {"fondo": "#FFFFFF", "borde": "#FED700", "borde_w": 2, "radio": 15, "lineas": None},
-            "elementos": {
-                "foto": {"x": 59, "y": 19, "w": 338, "h": 338, "alinear_h": "centro", "alinear_v": "arriba"},
-                "marca": {"x": 128, "y": 391, "w": 200, "tam": 20, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 24, "alinear": "centro", "max_lineas": 1},
-                "nombre": {"x": 51, "y": 414, "w": 355, "tam": 18, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 20, "max_lineas": 2, "alinear": "centro"},
-                "sku": {"x": 128, "y": 432, "w": 200, "tam": 13, "fuente": "HurmeGeometricSans1.otf", "color": "#0A063C", "interlineado": 16, "alinear": "centro", "max_lineas": 1},
-            },
-        },
-        "grid_8": {
-            "x": 64,
-            "y": 340,
-            "celda_w": 456,
-            "celda_h": 375,
-            "gap_x": 40,
-            "gap_y": 15,
-            "area_h": 0,
-            "centrar_impar": True,
-            "estilo": {"fondo": "#FFFFFF", "borde": "#FED700", "borde_w": 2, "radio": 15, "lineas": None},
-            "elementos": {
-                "foto": {"x": 103, "y": 10, "w": 250, "h": 250, "alinear_h": "centro", "alinear_v": "arriba"},
-                "marca": {"x": 14, "y": 296, "w": 200, "tam": 20, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 24, "alinear": "centro", "max_lineas": 1},
-                "nombre": {"x": 14, "y": 321, "w": 200, "tam": 18, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 20, "max_lineas": 2, "alinear": "centro"},
-                "sku": {"x": 242, "y": 359, "w": 200, "tam": 13, "fuente": "HurmeGeometricSans1.otf", "color": "#0A063C", "interlineado": 16, "alinear": "centro", "max_lineas": 1},
-            },
-        },
-        "legales": {
-            "x": 64,
-            "y": 1839,
-            "w": 952,
-            "tam": 16,
-            "fuente": "HurmeGeometricSans1.otf",
-            "fuente_negrita": "HurmeGeometricSans1 Bold.otf",
-            "color": "#FFFFFF",
-            "interlineado": 19,
-            "justificar": True,
-        },
-    },
-},
-    "CYBER WEEK": {
-        "PPL": {
-            "foto": {"x": 244, "y": 428, "w": 593, "h": 458, "alinear_h": "centro", "alinear_v": "medio"},
-            "marca": {"x": 164, "y": 953, "w": 450, "tam": 43, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 48, "max_lineas": 1, "alinear": "izq"},
-            "nombre": {"x": 164, "y": 990, "w": 470, "tam": 23, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 30, "max_lineas": 2, "alinear": "izq"},
-            "sku": {"x": 690, "y": 1001, "w": 200, "tam": 14, "fuente": "HurmeGeometricSans1.otf", "color": "#000000", "interlineado": 17, "alinear": "centro", "max_lineas": 1},
-            "precio": {
-                "x": 790,
-                "y": 968,
-                "alinear": "centro",
-                "tam_simbolo": 36,
-                "tam_numero": 85,
-                "fuente": "HurmeGeometricSans1 Bold.otf",
-                "separacion": 15,
-                "tracking": 0,
-                "simbolo_v": "base",
-                "color": "#000000",
-                "simbolo": "S/",
-                "chapa": None,
-            },
-            "legales": {"x": 50, "y": 1036, "w": 980, "tam": 11, "fuente": "HurmeGeometricSans1.otf", "fuente_negrita": "HurmeGeometricSans1 Bold.otf", "color": "#000000", "interlineado": 14, "justificar": True},
-        },
-        "FLYER": {
-            "fecha": {
-                "x": 540,
-                "y": 316,
-                "h": 50,
-                "tam": 24,
-                "fuente": "HurmeGeometricSans1 Bold.otf",
-                "pad_x": 17,
-                "alinear": "centro",
-                "relleno": None,
-                "borde": "#FFFFFF",
-                "borde_w": 3,
-                "radio": 10,
-                "color": "#FFFFFF",
-            },
-            "grid": {
-                "x": 84,
-                "y": 385,
-                "celda_w": 436,
-                "celda_h": 443,
-                "gap_x": 40,
-                "gap_y": 30,
-                "area_h": 0,
-                "centrar_impar": True,
-                "estilo": {"fondo": "#FFFFFF", "borde": "#FED700", "borde_w": 2, "radio": 15, "lineas": None},
-                "elementos": {"foto": {"x": 59, "y": 20, "w": 338, "h": 338, "alinear_h": "centro", "alinear_v": "arriba"}, "marca": {"x": 14, "y": 377, "w": 200, "tam": 20, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 24, "alinear": "centro", "max_lineas": 1}, "nombre": {"x": 14, "y": 402, "w": 200, "tam": 18, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 20, "max_lineas": 2, "alinear": "centro"}, "sku": {"x": 232, "y": 434, "w": 200, "tam": 13, "fuente": "HurmeGeometricSans1.otf", "color": "#0A063C", "interlineado": 16, "alinear": "centro", "max_lineas": 1}, "precio": {
-        "x": 332,
-        "y": 412,
-        "alinear": "centro",
-        "tam_simbolo": 24,
-        "tam_numero": 60,
-        "fuente": "HurmeGeometricSans1 Bold.otf",
-        "separacion": 8,
-        "tracking": 0,
-        "simbolo_v": "base",
-        "color": "#0A063C",
-        "simbolo": "S/",
-        "chapa": None,
-    }},
-            },
-            "grid_8": {
-                "x": 64,
-                "y": 340,
-                "celda_w": 456,
-                "celda_h": 375,
-                "gap_x": 40,
-                "gap_y": 15,
-                "area_h": 0,
-                "centrar_impar": True,
-                "estilo": {"fondo": "#FFFFFF", "borde": "#FED700", "borde_w": 2, "radio": 15, "lineas": None},
-                "elementos": {"foto": {"x": 103, "y": 10, "w": 250, "h": 250, "alinear_h": "centro", "alinear_v": "arriba"}, "marca": {"x": 14, "y": 296, "w": 200, "tam": 20, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 24, "alinear": "centro", "max_lineas": 1}, "nombre": {"x": 14, "y": 321, "w": 200, "tam": 18, "fuente": "HurmeGeometricSans1 Bold.otf", "color": "#0A063C", "interlineado": 20, "max_lineas": 2, "alinear": "centro"}, "sku": {"x": 242, "y": 359, "w": 200, "tam": 13, "fuente": "HurmeGeometricSans1.otf", "color": "#0A063C", "interlineado": 16, "alinear": "centro", "max_lineas": 1}, "precio": {
-        "x": 342,
-        "y": 339,
-        "alinear": "centro",
-        "tam_simbolo": 24,
-        "tam_numero": 60,
-        "fuente": "HurmeGeometricSans1 Bold.otf",
-        "separacion": 8,
-        "tracking": 0,
-        "simbolo_v": "base",
-        "color": "#0A063C",
-        "simbolo": "S/",
-        "chapa": None,
-    }},
-            },
-            "legales": {"x": 64, "y": 1829, "w": 952, "tam": 16, "fuente": "HurmeGeometricSans1.otf", "fuente_negrita": "HurmeGeometricSans1 Bold.otf", "color": "#FFFFFF", "interlineado": 19, "justificar": True},
-        },
-    },
-}
+# Ya no se pegan aqui: viven en DISENOS/<TIENDA>/<nombre>.json, uno por diseño,
+# y el Calibrador los guarda directo en el repo. Cada archivo trae:
+#   {"nombre": ..., "tienda": ..., "comentario": ..., "formatos": {"PPL": {...}, "STORY": {...}, ...}}
+# Una campaña usa el diseño que se llama igual que su "Tipo de diseño" del Sheet,
+# salvo que al correr se elija otro (DISENO_FORZADO). Si no hay diseño para esa
+# campaña/formato, se dibuja como siempre (coordenadas fijas + AJUSTES_CAMPANA).
+DISENO_FORZADO = ""   # lo fija main.py con la opcion elegida al correr
+
+def cargar_disenos(tienda):
+    """{NOMBRE EN MAYUSCULAS: {formato: layout}} con todos los .json de DISENOS/<tienda>/."""
+    carpeta = os.path.join("DISENOS", tienda)
+    disenos = {}
+    if os.path.isdir(carpeta):
+        for archivo in sorted(os.listdir(carpeta)):
+            if not archivo.lower().endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(carpeta, archivo), encoding="utf-8") as fh:
+                    d = json.load(fh)
+            except Exception as e:
+                print(f"⚠️  No se pudo leer el diseño {carpeta}/{archivo}: {e}")
+                continue
+            nombre = str(d.get("nombre") or archivo[:-5]).strip().upper()
+            disenos[nombre] = d.get("formatos", {})
+    return disenos
+
+LAYOUTS = cargar_disenos('LC')
+
+def layout_de(tipo, formato):
+    """Layout del formato para esta campaña, o None para dibujar como siempre."""
+    nombre = (DISENO_FORZADO or str(tipo)).strip().upper()
+    return LAYOUTS.get(nombre, {}).get(formato)
 
 # ======================================================================
 # MOTOR DE LAYOUT  (diseños hechos en el Calibrador Conecta)
@@ -914,7 +713,7 @@ def generar_diseno(data_input, color_version="AMARILLO"):
         f_m = f_p = f_pv = f_ps = f_s_ind = f_s_fly = f_f = f_l = ImageFont.load_default()
 
     # LAYOUTS: si esta campaña/formato fue diseñada en el Calibrador, se dibuja con el motor
-    _lay = LAYOUTS.get(str(tipo).strip().upper(), {}).get(formato)
+    _lay = layout_de(tipo, formato)
     if _lay:
         dibujar_layout(img, draw, _lay, data_input, path_fonts, path_fondos)
     elif formato == "FLYER":
@@ -1059,98 +858,3 @@ def resolver_columna(df, nombre_buscado):
         if c.strip().lower() == objetivo:
             return c
     return None
-
-# --- BUCLE DE EJECUCIÓN PRINCIPAL ---
-data, res_sheet, viejos = get_sheets_data()
-
-# FIX: cada script solo debe procesar sus propias filas, nunca las de la otra marca
-col_tienda = resolver_columna(data, 'Tienda')
-if col_tienda is None:
-    print(f"❌ No se encontró una columna 'Tienda' en Hoja 1. Columnas disponibles: {list(data.columns)}")
-    raise SystemExit(1)
-data = data[data[col_tienda].astype(str).str.strip().str.upper() == 'LC'].reset_index(drop=True)
-
-os.makedirs('output', exist_ok=True)
-h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
-archivos_generados = 0
-filas_para_google = []
-filas_a_actualizar = []   # (numero de fila en Resultados, valores) de piezas regeneradas
-
-print(f"DEBUG: Filas LC detectadas (columna real: '{col_tienda}'): {len(data)}")
-
-def hay_que_generar(llave, nombre_archivo, tipo_camp=""):
-    """True si la pieza falta: o no esta registrada en 'Resultados', o su archivo
-    ya no existe en output/ (p.ej. despues de una limpieza del repo), o su campaña
-    esta en FORZAR_REGENERAR.
-    AJUSTE: antes solo miraba el Sheet, asi que si se borraban las imagenes el
-    script las saltaba igual y todos los links quedaban en 404."""
-    if str(tipo_camp).strip().upper() in FORZAR_REGENERAR:
-        print(f"🔁 {llave}: campaña en FORZAR_REGENERAR, se vuelve a dibujar.")
-        return True
-    if llave not in viejos:
-        return True
-    if not os.path.exists(os.path.join("output", nombre_archivo)):
-        print(f"♻️  {llave} esta en Resultados pero falta output/{nombre_archivo}. Se regenera.")
-        return True
-    return False
-
-for idx, row in data.iterrows():
-    f_v = str(row['Formato']).upper().strip()
-    if f_v in ["FLYER", "", "0"]: continue
-
-    tipo_camp = str(row['Tipo de diseño']).strip().upper()
-    # AJUSTE: el fondo AZUL se retira. Todas las piezas salen solo en AMARILLO.
-    versiones = ["AMARILLO"]
-    for c in versiones:
-        sku_val = str(row['SKU']).replace("/", "-").replace("\\", "-")
-        llave = f"{sku_val}_{f_v}_{c}".upper()
-        archivo = ruta_salida(TIENDA_SCRIPT, row)
-        _era_nueva = llave not in viejos
-        if hay_que_generar(llave, archivo, row['Tipo de diseño']):
-            print(f"🎨 Generando pieza: {llave}")
-            url = generar_diseno(row, c)
-            # Si la llave ya existia, solo se repone el archivo: la fila del Sheet
-            # ya apunta a esa URL, asi que no se duplica el registro.
-            if url:
-                # Orden: Fecha | ID | Tienda | Diseño | Formato | Color | Link Imagen | Link web
-                lw = link_web(TIENDA_SCRIPT, row['SKU'])
-                fila = [h_lima, llave, TIENDA_SCRIPT, row['Tipo de diseño'], f_v, c, url, lw]
-                # AJUSTE: si la pieza ya estaba en Resultados se actualiza ESA fila (link nuevo)
-                if _era_nueva: filas_para_google.append(fila)
-                else: filas_a_actualizar.append((viejos[llave], fila))
-                archivos_generados += 1
-
-fly_g = data[data['Formato'].astype(str).str.upper().str.strip() == "FLYER"]
-for id_f, group in fly_g.groupby('ID_Flyer'):
-    if str(id_f) in ["0", "0.0", ""]: continue
-    tipo_camp = str(group.iloc[0]['Tipo de diseño']).strip().upper()
-    # AJUSTE: el fondo AZUL se retira. Todos los flyers salen solo en AMARILLO.
-    versiones = ["AMARILLO"]
-    for c in versiones:
-        llave = f"{id_f}_FLYER_{c}".upper()
-        # El archivo del flyer se nombra con el SKU del PRIMER producto del grupo
-        # (asi lo guarda generar_diseno), no con el ID_Flyer.
-        archivo = ruta_salida(TIENDA_SCRIPT, group)
-        _era_nueva = llave not in viejos
-        if hay_que_generar(llave, archivo, group.iloc[0]['Tipo de diseño']):
-            print(f"🎨 Generando Flyer: {llave}")
-            url = generar_diseno(group, c)
-            if url:
-                lw = link_web(TIENDA_SCRIPT, group.iloc[0]['SKU']) if FLYER_USA_PRIMER_SKU else TEXTO_SIN_FEED
-                fila = [h_lima, llave, TIENDA_SCRIPT, group.iloc[0]['Tipo de diseño'], "FLYER", c, url, lw]
-                if _era_nueva: filas_para_google.append(fila)
-                else: filas_a_actualizar.append((viejos[llave], fila))
-                archivos_generados += 1
-
-if filas_para_google:
-    res_sheet.append_rows(filas_para_google)
-    print(f"✅ Éxito: Se registraron {len(filas_para_google)} piezas nuevas.")
-# AJUSTE: piezas que ya estaban en Resultados -> se actualiza su misma fila (1 sola peticion)
-if filas_a_actualizar:
-    res_sheet.batch_update([{"range": f"A{n}:H{n}", "values": [fila]} for n, fila in filas_a_actualizar])
-    print(f"✅ Se actualizaron {len(filas_a_actualizar)} filas existentes en Resultados (link nuevo).")
-
-if archivos_generados == 0:
-    print("⚠️ No se generaron archivos nuevos.")
-    with open("last_run.txt", "w") as f:
-        f.write(f"Sin cambios: {h_lima}")
