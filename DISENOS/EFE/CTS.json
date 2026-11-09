@@ -4,7 +4,7 @@
   "comentario": "EFE sin precio, con cta",
   "campana": "CTS",
   "base": "EFERTON",
-  "actualizado": "2026-11-09 20:24",
+  "actualizado": "2026-11-09 20:37",
   "formatos": {
     "PPL": {
       "foto": {
@@ -102,9 +102,9 @@
         "alinear": "centro"
       },
       "sku": {
-        "x": 440,
+        "x": 341,
         "y": 1607,
-        "w": 200,
+        "w": 399,
         "tam": 22,
         "fuente": "Poppins-Regular.ttf",
         "color": "#FFFFFF",
