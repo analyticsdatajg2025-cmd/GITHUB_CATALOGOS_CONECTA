@@ -8,8 +8,9 @@
 #   TIENDAS         LC, EFE o las dos (por defecto las dos)
 #   DISENO_LC       nombre del diseño a usar en LC   (vacio = el que se llama igual que la campaña)
 #   DISENO_EFE      nombre del diseño a usar en EFE  (idem)
-#   FORMATOS        PPL, STORY, DISPLAY, FLYER separados por coma
-#   SKUS            SKUs separados por coma (los flyers que tengan alguno se rehacen enteros)
+#   FORMATOS        PPL, STORY, DISPLAY separados por coma
+#                   (FLYER desactivado desde 2026-11-09: ya no hay flyers)
+#   SKUS            SKUs separados por coma
 #   MARCAS          marcas separadas por coma
 #   SOLO_FALTANTES  "true" = salta lo que ya esta en Resultados y en output/.
 #                   Por defecto todo lo elegido se vuelve a dibujar.
@@ -54,10 +55,11 @@ def llave_pieza(tienda, sku, formato):
     return f"{limpio(sku)}_{formato}_{tienda}_EFE".upper()
 
 
-def llave_flyer(tienda, id_flyer):
-    if tienda == "LC":
-        return f"{id_flyer}_FLYER_AMARILLO".upper()
-    return f"{limpio(id_flyer)}_FLYER_EFE".upper()
+# FLYERS DESACTIVADOS (2026-11-09): ya no hay flyers. Se deja comentado por si vuelven.
+# def llave_flyer(tienda, id_flyer):
+#     if tienda == "LC":
+#         return f"{id_flyer}_FLYER_AMARILLO".upper()
+#     return f"{limpio(id_flyer)}_FLYER_EFE".upper()
 
 
 COLOR = {"LC": "AMARILLO", "EFE": "EFE"}
@@ -131,7 +133,7 @@ def main():
         print(f"\n===== {tienda}: {len(d)} filas en el Sheet" +
               (f" | diseño elegido: {DISENOS[tienda]}" if DISENOS[tienda] else ""))
 
-        # Piezas individuales (PPL, STORY, DISPLAY)
+        # Piezas individuales (PPL, STORY, DISPLAY). Las filas FLYER se ignoran.
         for _, row in d[~formato_col.isin(["FLYER", "", "0"])].iterrows():
             f_v = str(row["Formato"]).upper().strip()
             if (FORMATOS and f_v not in FORMATOS) or not coincide(row):
@@ -142,20 +144,22 @@ def main():
             print(f"🎨 {llave}")
             dibujar(tienda, motor, llave, row, row["Tipo de diseño"], f_v, row["SKU"])
 
-        # Flyers: se rehacen enteros si alguno de sus productos coincide con el filtro
-        if FORMATOS and "FLYER" not in FORMATOS:
-            continue
-        for id_f, grupo in d[formato_col == "FLYER"].groupby("ID_Flyer"):
-            if str(id_f) in ("0", "0.0", ""):
-                continue
-            if (SKUS or MARCAS) and not any(coincide(r) for _, r in grupo.iterrows()):
-                continue
-            llave = llave_flyer(tienda, id_f)
-            if not hay_que_generar(llave, motor.ruta_salida(tienda, grupo)):
-                continue
-            print(f"🎨 Flyer {llave}")
-            sku_link = grupo.iloc[0]["SKU"] if motor.FLYER_USA_PRIMER_SKU else None
-            dibujar(tienda, motor, llave, grupo, grupo.iloc[0]["Tipo de diseño"], "FLYER", sku_link)
+        # FLYERS DESACTIVADOS (2026-11-09): ya no hay flyers. Las filas con Formato FLYER
+        # del Sheet se ignoran (arriba se excluyen). Para reactivarlos, descomentar este bloque
+        # y llave_flyer().
+        # if FORMATOS and "FLYER" not in FORMATOS:
+        #     continue
+        # for id_f, grupo in d[formato_col == "FLYER"].groupby("ID_Flyer"):
+        #     if str(id_f) in ("0", "0.0", ""):
+        #         continue
+        #     if (SKUS or MARCAS) and not any(coincide(r) for _, r in grupo.iterrows()):
+        #         continue
+        #     llave = llave_flyer(tienda, id_f)
+        #     if not hay_que_generar(llave, motor.ruta_salida(tienda, grupo)):
+        #         continue
+        #     print(f"🎨 Flyer {llave}")
+        #     sku_link = grupo.iloc[0]["SKU"] if motor.FLYER_USA_PRIMER_SKU else None
+        #     dibujar(tienda, motor, llave, grupo, grupo.iloc[0]["Tipo de diseño"], "FLYER", sku_link)
 
     # Resultados: 1 peticion para las nuevas y 1 para las que ya estaban (misma fila, link nuevo)
     if filas_nuevas:
