@@ -1,1 +1,1 @@
-2026-11-09 14:47 | Piezas generadas: 193 | filas nuevas en Resultados: 119 | filas actualizadas: 74 | errores: 38
+2026-11-09 14:53 | Piezas generadas: 231 | filas nuevas en Resultados: 231 | filas actualizadas: 0 | errores: 0
