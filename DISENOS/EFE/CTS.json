@@ -1,23 +1,23 @@
 {
   "nombre": "CTS",
   "tienda": "EFE",
-  "comentario": "EFE sin precio, con cta",
+  "comentario": "Copiado de LC «CTS»",
   "campana": "CTS",
   "base": "EFERTON",
-  "actualizado": "2026-11-09 20:37",
+  "actualizado": "2026-11-09 21:17",
   "formatos": {
     "PPL": {
       "foto": {
-        "x": 214,
-        "y": 309,
-        "w": 652,
-        "h": 500,
+        "x": 410,
+        "y": 328,
+        "w": 639,
+        "h": 577,
         "alinear_h": "centro",
         "alinear_v": "arriba"
       },
       "marca": {
-        "x": 315,
-        "y": 858,
+        "x": 4,
+        "y": 544,
         "w": 450,
         "tam": 43,
         "fuente": "Poppins-SemiBold.ttf",
@@ -27,9 +27,9 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": 168,
-        "y": 889,
-        "w": 745,
+        "x": 3,
+        "y": 592,
+        "w": 466,
         "tam": 22,
         "fuente": "Poppins-SemiBold.ttf",
         "color": "#FFFFFF",
@@ -38,8 +38,8 @@
         "alinear": "centro"
       },
       "sku": {
-        "x": 440,
-        "y": 916,
+        "x": 128,
+        "y": 669,
         "w": 200,
         "tam": 14,
         "fuente": "Poppins-Regular.ttf",
@@ -64,7 +64,7 @@
           "etiqueta": "cta-EFE",
           "archivo": "cta-EFE.png",
           "x": 381,
-          "y": 937,
+          "y": 922,
           "w": 319,
           "h": 59
         }
@@ -91,19 +91,19 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": 68,
-        "y": 1553,
-        "w": 945,
-        "tam": 29,
+        "x": 41,
+        "y": 1556,
+        "w": 999,
+        "tam": 28,
         "fuente": "Poppins-SemiBold.ttf",
         "color": "#FFFFFF",
-        "interlineado": 40,
+        "interlineado": 41,
         "max_lineas": 2,
         "alinear": "centro"
       },
       "sku": {
         "x": 341,
-        "y": 1607,
+        "y": 1606,
         "w": 399,
         "tam": 22,
         "fuente": "Poppins-Regular.ttf",
