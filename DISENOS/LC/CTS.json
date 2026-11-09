@@ -4,7 +4,7 @@
   "comentario": "LC sin precio, con cta",
   "campana": "CTS",
   "base": "LC",
-  "actualizado": "2026-11-09 21:27",
+  "actualizado": "2026-11-09 22:08",
   "formatos": {
     "PPL": {
       "foto": {
@@ -16,8 +16,8 @@
         "alinear_v": "arriba"
       },
       "marca": {
-        "x": 23,
-        "y": 544,
+        "x": 17,
+        "y": 559,
         "w": 435,
         "tam": 43,
         "fuente": "HurmeGeometricSans1 Bold.otf",
@@ -28,7 +28,7 @@
       },
       "nombre": {
         "x": 15,
-        "y": 601,
+        "y": 607,
         "w": 437,
         "tam": 22,
         "fuente": "HurmeGeometricSans1 Bold.otf",
@@ -39,7 +39,7 @@
       },
       "sku": {
         "x": 134,
-        "y": 676,
+        "y": 677,
         "w": 200,
         "tam": 14,
         "fuente": "HurmeGeometricSans1.otf",
