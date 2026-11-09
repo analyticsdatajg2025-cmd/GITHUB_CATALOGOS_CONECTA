@@ -4,21 +4,21 @@
   "comentario": "LC sin precio, con cta",
   "campana": "CTS",
   "base": "LC",
-  "actualizado": "2026-11-09 21:15",
+  "actualizado": "2026-11-09 21:27",
   "formatos": {
     "PPL": {
       "foto": {
         "x": 412,
-        "y": 323,
+        "y": 321,
         "w": 639,
         "h": 577,
         "alinear_h": "centro",
         "alinear_v": "arriba"
       },
       "marca": {
-        "x": 4,
+        "x": 23,
         "y": 544,
-        "w": 450,
+        "w": 435,
         "tam": 43,
         "fuente": "HurmeGeometricSans1 Bold.otf",
         "color": "#000000",
@@ -27,9 +27,9 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": -12,
-        "y": 590,
-        "w": 481,
+        "x": 15,
+        "y": 601,
+        "w": 437,
         "tam": 22,
         "fuente": "HurmeGeometricSans1 Bold.otf",
         "color": "#000000",
@@ -38,8 +38,8 @@
         "alinear": "centro"
       },
       "sku": {
-        "x": 128,
-        "y": 669,
+        "x": 134,
+        "y": 676,
         "w": 200,
         "tam": 14,
         "fuente": "HurmeGeometricSans1.otf",
