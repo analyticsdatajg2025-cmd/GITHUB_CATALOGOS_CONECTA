@@ -4,7 +4,7 @@
   "comentario": "Copiado de LC «CTS»",
   "campana": "CTS",
   "base": "EFERTON",
-  "actualizado": "2026-11-09 21:28",
+  "actualizado": "2026-11-09 22:06",
   "formatos": {
     "PPL": {
       "foto": {
@@ -17,7 +17,7 @@
       },
       "marca": {
         "x": 19,
-        "y": 544,
+        "y": 553,
         "w": 398,
         "tam": 43,
         "fuente": "Poppins-SemiBold.ttf",
@@ -28,7 +28,7 @@
       },
       "nombre": {
         "x": 16,
-        "y": 597,
+        "y": 606,
         "w": 404,
         "tam": 22,
         "fuente": "Poppins-SemiBold.ttf",
@@ -39,7 +39,7 @@
       },
       "sku": {
         "x": 118,
-        "y": 673,
+        "y": 680,
         "w": 200,
         "tam": 14,
         "fuente": "Poppins-Regular.ttf",
