@@ -1,5 +1,8 @@
 # GITHUB_CATALOGOS_CONECTA
-Automatizar diseños como Story, PPL, Display y Flyers para conecta (EFE y LC).
+Automatizar diseños como Story, PPL y Display para conecta (EFE y LC).
+
+> **Flyers desactivados desde 2026-11-09.** El código de flyers quedó comentado en `main.py`
+> y en los programas clásicos; las filas FLYER del Sheet se ignoran.
 
 ## Cómo se generan las piezas
 1. Comercial llena **Hoja 1** del Sheet. La columna «Tipo de diseño» es la campaña.
@@ -12,7 +15,7 @@ Automatizar diseños como Story, PPL, Display y Flyers para conecta (EFE y LC).
    - **Programa**: «Clásico LC» / «Clásico EFE» corren los diseños clásicos de siempre.
 3. Las piezas quedan en:
    - `output/<TIENDA>/<SKU>/<SKU>_<FORMATO>.jpg` (PPL, STORY, DISPLAY)
-   - `output/<TIENDA>/FLYER/<ID_Flyer>.jpg`
+   - ~~`output/<TIENDA>/FLYER/<ID_Flyer>.jpg`~~ (flyers desactivados)
    y su link en la hoja **Resultados** (si la pieza ya tenía fila, se actualiza esa misma fila).
 
 ## Dónde está cada cosa
