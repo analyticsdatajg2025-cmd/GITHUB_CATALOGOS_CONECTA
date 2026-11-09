@@ -14,10 +14,15 @@
 #   MARCAS          marcas separadas por coma
 #   SOLO_FALTANTES  "true" = salta lo que ya esta en Resultados y en output/.
 #                   Por defecto todo lo elegido se vuelve a dibujar.
+#
+# Si se genera TODO (las dos tiendas, todos los formatos, sin SKUs/marcas, sin solo faltantes),
+# 'Resultados' se borra desde la fila 2 antes de escribir. Si no, se actualiza la misma fila.
 import os
 import re
 import sys
 from datetime import datetime, timedelta
+
+from gspread.utils import rowcol_to_a1
 
 import motor_lc
 import motor_efe
@@ -41,6 +46,14 @@ FORMATOS = opcion_lista("FORMATOS")
 SKUS = opcion_lista("SKUS")
 MARCAS = opcion_lista("MARCAS")
 SOLO_FALTANTES = opcion_si("SOLO_FALTANTES")
+
+# Corrida completa = las dos tiendas, todos los formatos, sin SKUs ni marcas y sin "solo faltantes".
+# Solo en ese caso se borra 'Resultados' (desde la fila 2, todas las columnas) y se escribe de nuevo.
+# En corridas parciales NO se borra: se actualiza la misma fila o se agrega una al final, para no
+# perder los links de las demas piezas.
+FORMATOS_ACTIVOS = ["PPL", "STORY", "DISPLAY"]   # FLYER desactivado (2026-11-09)
+CORRIDA_COMPLETA = (set(TIENDAS) == set(MOTORES) and not SKUS and not MARCAS and not SOLO_FALTANTES
+                    and (not FORMATOS or set(FORMATOS_ACTIVOS) <= set(FORMATOS)))
 
 
 def limpio(valor):
@@ -92,6 +105,12 @@ def main():
             sys.exit(1)
 
     data, res_sheet, viejos = motor_lc.get_sheets_data()
+    if CORRIDA_COMPLETA:
+        # Todo va como fila nueva: 'Resultados' se borra justo antes de escribir.
+        print("🧹 Corrida completa: 'Resultados' se borrara (desde la fila 2) y se escribira de nuevo.")
+        viejos = {}
+    else:
+        viejos = {k: v for k, v in viejos.items() if k}   # filas sin ID no cuentan
     h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
     filas_nuevas, filas_actualizar, errores = [], [], []
     hechas = 0
@@ -161,6 +180,10 @@ def main():
         #     sku_link = grupo.iloc[0]["SKU"] if motor.FLYER_USA_PRIMER_SKU else None
         #     dibujar(tienda, motor, llave, grupo, grupo.iloc[0]["Tipo de diseño"], "FLYER", sku_link)
 
+    # Corrida completa: borra 'Resultados' desde la fila 2 (todas las columnas, encabezados intactos)
+    # justo antes de escribir, asi una corrida que se cae a medias no deja la hoja vacia.
+    if CORRIDA_COMPLETA and res_sheet.row_count > 1:
+        res_sheet.batch_clear([f"A2:{rowcol_to_a1(res_sheet.row_count, res_sheet.col_count)}"])
     # Resultados: 1 peticion para las nuevas y 1 para las que ya estaban (misma fila, link nuevo)
     if filas_nuevas:
         res_sheet.append_rows(filas_nuevas)
