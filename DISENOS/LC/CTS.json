@@ -1,15 +1,15 @@
 {
   "nombre": "CTS",
   "tienda": "LC",
-  "comentario": "LC sin precio, con boton cta",
+  "comentario": "LC sin precio, con cta",
   "campana": "CTS",
   "base": "LC",
-  "actualizado": "2026-11-09 19:43",
+  "actualizado": "2026-11-09 20:23",
   "formatos": {
     "PPL": {
       "foto": {
         "x": 214,
-        "y": 304,
+        "y": 309,
         "w": 652,
         "h": 500,
         "alinear_h": "centro",
@@ -17,7 +17,7 @@
       },
       "marca": {
         "x": 315,
-        "y": 850,
+        "y": 858,
         "w": 450,
         "tam": 43,
         "fuente": "HurmeGeometricSans1 Bold.otf",
@@ -27,10 +27,10 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": 305,
-        "y": 880,
-        "w": 470,
-        "tam": 23,
+        "x": 162,
+        "y": 891,
+        "w": 756,
+        "tam": 22,
         "fuente": "HurmeGeometricSans1 Bold.otf",
         "color": "#000000",
         "interlineado": 30,
@@ -39,7 +39,7 @@
       },
       "sku": {
         "x": 440,
-        "y": 906,
+        "y": 917,
         "w": 200,
         "tam": 14,
         "fuente": "HurmeGeometricSans1.otf",
@@ -50,7 +50,7 @@
       },
       "legales": {
         "x": 50,
-        "y": 1019,
+        "y": 1030,
         "w": 980,
         "tam": 11,
         "fuente": "HurmeGeometricSans1.otf",
@@ -64,7 +64,7 @@
           "etiqueta": "cta-LC",
           "archivo": "cta-LC.png",
           "x": 381,
-          "y": 927,
+          "y": 937,
           "w": 319,
           "h": 59
         }
@@ -91,10 +91,10 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": 164,
-        "y": 1558,
-        "w": 753,
-        "tam": 32,
+        "x": 68,
+        "y": 1557,
+        "w": 945,
+        "tam": 28,
         "fuente": "HurmeGeometricSans1 Bold.otf",
         "color": "#000000",
         "interlineado": 40,
@@ -102,8 +102,8 @@
         "alinear": "centro"
       },
       "sku": {
-        "x": 441,
-        "y": 1606,
+        "x": 440,
+        "y": 1607,
         "w": 200,
         "tam": 22,
         "fuente": "HurmeGeometricSans1.otf",
@@ -156,9 +156,9 @@
       },
       "nombre": {
         "x": 32,
-        "y": 271,
+        "y": 266,
         "w": 387,
-        "tam": 20,
+        "tam": 19,
         "fuente": "HurmeGeometricSans1 Bold.otf",
         "color": "#000000",
         "interlineado": 27,
@@ -167,7 +167,7 @@
       },
       "sku": {
         "x": 125,
-        "y": 312,
+        "y": 318,
         "w": 200,
         "tam": 13,
         "fuente": "HurmeGeometricSans1.otf",
