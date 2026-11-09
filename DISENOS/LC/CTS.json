@@ -4,12 +4,12 @@
   "comentario": "LC sin precio, con cta",
   "campana": "CTS",
   "base": "LC",
-  "actualizado": "2026-11-09 20:23",
+  "actualizado": "2026-11-09 20:39",
   "formatos": {
     "PPL": {
       "foto": {
         "x": 214,
-        "y": 309,
+        "y": 307,
         "w": 652,
         "h": 500,
         "alinear_h": "centro",
@@ -27,9 +27,9 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": 162,
-        "y": 891,
-        "w": 756,
+        "x": 168,
+        "y": 892,
+        "w": 745,
         "tam": 22,
         "fuente": "HurmeGeometricSans1 Bold.otf",
         "color": "#000000",
@@ -39,7 +39,7 @@
       },
       "sku": {
         "x": 440,
-        "y": 917,
+        "y": 920,
         "w": 200,
         "tam": 14,
         "fuente": "HurmeGeometricSans1.otf",
@@ -91,20 +91,20 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": 68,
-        "y": 1557,
-        "w": 945,
+        "x": 41,
+        "y": 1556,
+        "w": 999,
         "tam": 28,
         "fuente": "HurmeGeometricSans1 Bold.otf",
         "color": "#000000",
-        "interlineado": 40,
+        "interlineado": 41,
         "max_lineas": 2,
         "alinear": "centro"
       },
       "sku": {
-        "x": 440,
-        "y": 1607,
-        "w": 200,
+        "x": 341,
+        "y": 1606,
+        "w": 399,
         "tam": 22,
         "fuente": "HurmeGeometricSans1.otf",
         "color": "#000000",
