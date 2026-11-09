@@ -29,7 +29,7 @@ on:
         required: false
         default: ""
       formatos:
-        description: "Formatos separados por coma: PPL, STORY, DISPLAY, FLYER (vacio = todos)"
+        description: "Formatos separados por coma: PPL, STORY, DISPLAY (vacio = todos; FLYER desactivado)"
         required: false
         default: ""
       skus:
