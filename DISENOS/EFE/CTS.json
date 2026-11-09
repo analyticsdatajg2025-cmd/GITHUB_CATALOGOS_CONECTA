@@ -4,7 +4,7 @@
   "comentario": "EFE sin precio, con cta",
   "campana": "CTS",
   "base": "EFERTON",
-  "actualizado": "2026-11-09 19:46",
+  "actualizado": "2026-11-09 20:24",
   "formatos": {
     "PPL": {
       "foto": {
@@ -27,10 +27,10 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": 305,
+        "x": 168,
         "y": 889,
-        "w": 470,
-        "tam": 23,
+        "w": 745,
+        "tam": 22,
         "fuente": "Poppins-SemiBold.ttf",
         "color": "#FFFFFF",
         "interlineado": 30,
@@ -39,7 +39,7 @@
       },
       "sku": {
         "x": 440,
-        "y": 914,
+        "y": 916,
         "w": 200,
         "tam": 14,
         "fuente": "Poppins-Regular.ttf",
@@ -91,10 +91,10 @@
         "alinear": "centro"
       },
       "nombre": {
-        "x": 164,
-        "y": 1558,
-        "w": 753,
-        "tam": 32,
+        "x": 68,
+        "y": 1553,
+        "w": 945,
+        "tam": 29,
         "fuente": "Poppins-SemiBold.ttf",
         "color": "#FFFFFF",
         "interlineado": 40,
@@ -102,8 +102,8 @@
         "alinear": "centro"
       },
       "sku": {
-        "x": 441,
-        "y": 1606,
+        "x": 440,
+        "y": 1607,
         "w": 200,
         "tam": 22,
         "fuente": "Poppins-Regular.ttf",
@@ -156,9 +156,9 @@
       },
       "nombre": {
         "x": 32,
-        "y": 271,
+        "y": 266,
         "w": 387,
-        "tam": 20,
+        "tam": 19,
         "fuente": "Poppins-SemiBold.ttf",
         "color": "#FFFFFF",
         "interlineado": 27,
@@ -167,7 +167,7 @@
       },
       "sku": {
         "x": 125,
-        "y": 312,
+        "y": 318,
         "w": 200,
         "tam": 13,
         "fuente": "Poppins-Regular.ttf",
