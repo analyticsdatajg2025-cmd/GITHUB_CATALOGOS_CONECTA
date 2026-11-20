@@ -4,7 +4,7 @@
   "comentario": "Basado en «CTS»",
   "campana": "BLACK WEEK",
   "base": "LC",
-  "actualizado": "2026-11-20 15:10",
+  "actualizado": "2026-11-20 15:45",
   "formatos": {
     "PPL": {
       "foto": {
@@ -16,8 +16,8 @@
         "alinear_v": "arriba"
       },
       "marca": {
-        "x": 18,
-        "y": 481,
+        "x": 16,
+        "y": 498,
         "w": 435,
         "tam": 43,
         "fuente": "HurmeGeometricSans1 Bold.otf",
@@ -28,7 +28,7 @@
       },
       "nombre": {
         "x": 15,
-        "y": 533,
+        "y": 562,
         "w": 437,
         "tam": 22,
         "fuente": "HurmeGeometricSans1 Bold.otf",
@@ -38,8 +38,8 @@
         "alinear": "centro"
       },
       "sku": {
-        "x": 136,
-        "y": 609,
+        "x": 134,
+        "y": 649,
         "w": 200,
         "tam": 14,
         "fuente": "HurmeGeometricSans1.otf",
