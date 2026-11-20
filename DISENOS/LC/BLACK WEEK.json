@@ -4,7 +4,7 @@
   "comentario": "Basado en «CTS»",
   "campana": "BLACK WEEK",
   "base": "LC",
-  "actualizado": "2026-11-20 15:09",
+  "actualizado": "2026-11-20 15:10",
   "formatos": {
     "PPL": {
       "foto": {
@@ -136,8 +136,8 @@
     },
     "DISPLAY": {
       "foto": {
-        "x": 480,
-        "y": 20,
+        "x": 481,
+        "y": 41,
         "w": 444,
         "h": 444,
         "alinear_h": "centro",
@@ -145,7 +145,7 @@
       },
       "marca": {
         "x": 75,
-        "y": 233,
+        "y": 219,
         "w": 300,
         "tam": 34,
         "fuente": "HurmeGeometricSans1 Bold.otf",
@@ -156,7 +156,7 @@
       },
       "nombre": {
         "x": 32,
-        "y": 266,
+        "y": 257,
         "w": 387,
         "tam": 19,
         "fuente": "HurmeGeometricSans1 Bold.otf",
