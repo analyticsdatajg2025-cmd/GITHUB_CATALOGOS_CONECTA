@@ -17,10 +17,16 @@
 #
 # Si se genera TODO (las dos tiendas, todos los formatos, sin SKUs/marcas, sin solo faltantes),
 # 'Resultados' se borra desde la fila 2 antes de escribir. Si no, se actualiza la misma fila.
+#
+# Material antiguo: cada corrida limpia output/ (ver "MATERIAL ANTIGUO" mas abajo).
+#   Corrida completa -> output/ queda solo con las piezas de esta corrida.
+#   Corrida parcial  -> de las tiendas elegidas se borra lo que ya no esta en el Sheet,
+#                       y se quitan de 'Resultados' las filas de esas piezas.
 import os
 import re
 import sys
 from datetime import datetime, timedelta
+from urllib.parse import unquote
 
 from gspread.utils import rowcol_to_a1
 
@@ -92,6 +98,53 @@ def coincide(fila):
     return True
 
 
+# ======================================================================
+# MATERIAL ANTIGUO
+# ======================================================================
+# Lo que queda en output/ de corridas anteriores ya es material antiguo, asi que cada corrida
+# lo borra. Se borra AL FINAL (despues de dibujar y de escribir 'Resultados'), no al empezar:
+# asi una corrida que se cae a medias no deja la carpeta vacia ni links rotos.
+def archivos_de(carpeta=""):
+    """Todo lo que hay en output/<carpeta>, como rutas relativas a output/ (con '/')."""
+    base = os.path.join("output", carpeta) if carpeta else "output"
+    return sorted(os.path.relpath(os.path.join(raiz, a), "output").replace(os.sep, "/")
+                  for raiz, _, archivos in os.walk(base) for a in archivos)
+
+
+def material_antiguo(generadas, vigentes):
+    """Archivos de output/ que sobran en esta corrida.
+    Corrida completa: todo lo que no se acaba de generar (cualquier carpeta).
+    Corrida parcial: solo en las tiendas elegidas, lo que ya no es de ninguna fila del Sheet;
+    las piezas vigentes que no se rehicieron se quedan, porque su link sigue en 'Resultados'."""
+    if CORRIDA_COMPLETA:
+        return [a for a in archivos_de() if a not in generadas]
+    return [a for t in TIENDAS for a in archivos_de(t) if a not in vigentes]
+
+
+def quitar_filas_de(res_sheet, antiguas):
+    """Corrida parcial: quita de 'Resultados' las filas cuyo link apunta a una pieza que se va a
+    borrar (si no, quedarian con el link roto). Una sola peticion; de abajo hacia arriba para que
+    no se corran los numeros de fila. Devuelve cuantas filas quito."""
+    rotos = {motor_lc.RAW_URL + a for a in antiguas}
+    links = res_sheet.col_values(7)   # columna G = link de la pieza
+    filas = [n for n, link in enumerate(links, start=1) if n > 1 and unquote(str(link).strip()) in rotos]
+    if filas:
+        res_sheet.spreadsheet.batch_update({"requests": [
+            {"deleteDimension": {"range": {"sheetId": res_sheet.id, "dimension": "ROWS",
+                                           "startIndex": n - 1, "endIndex": n}}}
+            for n in sorted(filas, reverse=True)]})
+    return len(filas)
+
+
+def borrar_de_output(antiguas):
+    """Borra esos archivos de output/ y las carpetas que queden vacias."""
+    for a in antiguas:
+        os.remove(os.path.join("output", a))
+    for raiz, _, _ in os.walk("output", topdown=False):
+        if raiz != "output" and not os.listdir(raiz):
+            os.rmdir(raiz)
+
+
 def main():
     print(f"Opciones -> tiendas: {TIENDAS} | diseños: {DISENOS} | formatos: {FORMATOS or 'todos'} | "
           f"SKUs: {SKUS or 'todos'} | marcas: {MARCAS or 'todas'} | solo faltantes: {SOLO_FALTANTES}")
@@ -114,6 +167,8 @@ def main():
     h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
     filas_nuevas, filas_actualizar, errores = [], [], []
     hechas = 0
+    generadas = set()   # piezas dibujadas en esta corrida (rutas dentro de output/)
+    vigentes = set()    # piezas de las filas actuales del Sheet, se dibujen o no en esta corrida
 
     def hay_que_generar(llave, archivo):
         if not SOLO_FALTANTES:
@@ -141,6 +196,7 @@ def main():
             errores.append(f"{llave}: no se genero (revisa el aviso de arriba, por ejemplo un fondo que falta)")
             return
         registrar(tienda, motor, llave, diseno, formato, url, sku_link)
+        generadas.add(motor.ruta_salida(tienda, data_input))
         hechas += 1
 
     os.makedirs("output", exist_ok=True)
@@ -155,6 +211,7 @@ def main():
         # Piezas individuales (PPL, STORY, DISPLAY). Las filas FLYER se ignoran.
         for _, row in d[~formato_col.isin(["FLYER", "", "0"])].iterrows():
             f_v = str(row["Formato"]).upper().strip()
+            vigentes.add(motor.ruta_salida(tienda, row))
             if (FORMATOS and f_v not in FORMATOS) or not coincide(row):
                 continue
             llave = llave_pieza(tienda, row["SKU"], f_v)
@@ -190,8 +247,18 @@ def main():
     if filas_actualizar:
         res_sheet.batch_update([{"range": f"A{n}:H{n}", "values": [fila]} for n, fila in filas_actualizar])
 
+    # Material antiguo: primero se quitan sus filas de 'Resultados' (en corrida completa la hoja ya
+    # se escribio de nuevo) y recien entonces se borran los archivos.
+    antiguas = material_antiguo(generadas, vigentes)
+    filas_quitadas = quitar_filas_de(res_sheet, antiguas) if antiguas and not CORRIDA_COMPLETA else 0
+    borrar_de_output(antiguas)
+    if antiguas:
+        print(f"🧹 Material antiguo: {len(antiguas)} archivos borrados de output/" +
+              (f" y {filas_quitadas} filas quitadas de 'Resultados'." if filas_quitadas else "."))
+
     resumen = (f"Piezas generadas: {hechas} | filas nuevas en Resultados: {len(filas_nuevas)} | "
-               f"filas actualizadas: {len(filas_actualizar)} | errores: {len(errores)}")
+               f"filas actualizadas: {len(filas_actualizar)} | errores: {len(errores)} | "
+               f"material antiguo borrado: {len(antiguas)}")
     print("\n" + ("✅ " if not errores else "⚠️  ") + resumen)
     for e in errores:
         print("   ❌ " + e)

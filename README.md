@@ -17,6 +17,14 @@ Automatizar diseños como Story, PPL y Display para conecta (EFE y LC).
    - `output/<TIENDA>/<SKU>/<SKU>_<FORMATO>.jpg` (PPL, STORY, DISPLAY)
    - ~~`output/<TIENDA>/FLYER/<ID_Flyer>.jpg`~~ (flyers desactivados)
    y su link en la hoja **Resultados** (si la pieza ya tenía fila, se actualiza esa misma fila).
+4. **Cada corrida borra el material antiguo de `output/`** (programa «Nuevo»; se borra al final, cuando
+   las piezas nuevas ya están hechas y anotadas):
+   - Corrida completa (las dos tiendas, todos los formatos, sin SKUs ni marcas, sin «solo lo que falta»):
+     `output/` queda solo con las piezas de esa corrida.
+   - Corrida parcial (una tienda, algunos formatos, SKUs o marcas, o «solo lo que falta»): de las tiendas
+     elegidas se borra lo que ya no está en el Sheet y se quitan sus filas de **Resultados**. Las piezas
+     vigentes que no se rehicieron se quedan, porque su link sigue en uso.
+   - Los programas clásicos no borran nada.
 
 ## Dónde está cada cosa
 | Qué | Dónde |
