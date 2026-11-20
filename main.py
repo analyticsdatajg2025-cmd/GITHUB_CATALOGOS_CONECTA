@@ -22,6 +22,8 @@
 #   Corrida completa -> output/ queda solo con las piezas de esta corrida.
 #   Corrida parcial  -> de las tiendas elegidas se borra lo que ya no esta en el Sheet,
 #                       y se quitan de 'Resultados' las filas de esas piezas.
+import contextlib
+import io
 import os
 import re
 import sys
@@ -90,6 +92,48 @@ def generar(tienda, data_input):
     return motor_efe.generar_diseno(data_input)
 
 
+# ======================================================================
+# AVISOS LEGIBLES (last_run.txt)
+# ======================================================================
+# El Calibrador lee last_run.txt al terminar la corrida y le muestra a quien la lanzo que salio y que
+# fallo, sin entrar a GitHub. Formato:
+#   linea 1: <hora Lima> | <resumen>
+#   linea 2: corrida: <GITHUB_RUN_ID>   (asi el Calibrador sabe que es de SU corrida)
+#   luego:   una linea "❌ ..." por pieza que no salio y "⚠️ ..." por pieza que salio con algo raro
+MAX_AVISOS = 40
+
+
+def hora_lima():
+    return (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
+
+
+def escribir_last_run(resumen, errores=(), avisos=()):
+    lineas = [f"{hora_lima()} | {resumen}", f"corrida: {os.environ.get('GITHUB_RUN_ID', '-')}"]
+    lineas += ["❌ " + e for e in list(errores)[:MAX_AVISOS]]
+    lineas += ["⚠️ " + a for a in list(avisos)[:MAX_AVISOS]]
+    with open("last_run.txt", "w", encoding="utf-8") as fh:
+        fh.write("\n".join(lineas) + "\n")
+
+
+class _Copia(io.TextIOBase):
+    """Escribe en la consola (el log de GitHub sigue igual) y ademas guarda una copia."""
+    def __init__(self, real):
+        self.real, self.texto = real, io.StringIO()
+
+    def write(self, t):
+        self.real.write(t)
+        return self.texto.write(t)
+
+    def flush(self):
+        self.real.flush()
+
+
+def frase(linea):
+    """Primera frase de un aviso del motor, sin el emoji: 'FONDO NO ENCONTRADO para LC / X / PPL'."""
+    t = re.sub(r"^[^\w(]+", "", linea.strip())
+    return re.split(r"\.\s", t, maxsplit=1)[0].strip()[:180]
+
+
 def coincide(fila):
     if SKUS and str(fila.get("SKU", "")).strip().upper() not in SKUS:
         return False
@@ -155,6 +199,8 @@ def main():
         if nombre and nombre.upper() not in MOTORES[t].LAYOUTS:
             print(f"❌ No existe el diseño '{nombre}' en DISENOS/{t}/. "
                   f"Hay: {sorted(MOTORES[t].LAYOUTS) or 'ninguno'}")
+            escribir_last_run("No se genero nada", [f"{t}: no existe el diseño '{nombre}'. "
+                                                     f"Hay: {', '.join(sorted(MOTORES[t].LAYOUTS)) or 'ninguno'}"])
             sys.exit(1)
 
     data, res_sheet, viejos = motor_lc.get_sheets_data()
@@ -164,8 +210,8 @@ def main():
         viejos = {}
     else:
         viejos = {k: v for k, v in viejos.items() if k}   # filas sin ID no cuentan
-    h_lima = (datetime.now() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M")
-    filas_nuevas, filas_actualizar, errores = [], [], []
+    h_lima = hora_lima()
+    filas_nuevas, filas_actualizar, errores, avisos = [], [], [], []
     hechas = 0
     generadas = set()   # piezas dibujadas en esta corrida (rutas dentro de output/)
     vigentes = set()    # piezas de las filas actuales del Sheet, se dibujen o no en esta corrida
@@ -186,15 +232,22 @@ def main():
 
     def dibujar(tienda, motor, llave, data_input, diseno, formato, sku_link):
         nonlocal hechas
+        # Lo que el motor imprime mientras dibuja esta pieza (fondo que falta, foto que no baja...)
+        # se copia para contarlo en last_run.txt con palabras, no solo en el log.
+        copia = _Copia(sys.stdout)
         try:
-            url = generar(tienda, data_input)
+            with contextlib.redirect_stdout(copia):
+                url = generar(tienda, data_input)
         except Exception as e:
             print(f"❌ {llave}: {e}")
             errores.append(f"{llave}: {e}")
             return
+        dichos = [frase(l) for l in copia.texto.getvalue().splitlines() if l.lstrip().startswith(("❌", "⚠"))]
         if not url:
-            errores.append(f"{llave}: no se genero (revisa el aviso de arriba, por ejemplo un fondo que falta)")
+            motivo = "; ".join(dict.fromkeys(dichos)) or "no se genero (revisa el log de la corrida)"
+            errores.append(f"{llave}: {motivo}")
             return
+        avisos.extend(f"{llave}: {d}" for d in dict.fromkeys(dichos))
         registrar(tienda, motor, llave, diseno, formato, url, sku_link)
         generadas.add(motor.ruta_salida(tienda, data_input))
         hechas += 1
@@ -264,13 +317,18 @@ def main():
         print("   ❌ " + e)
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
-            fh.write(f"### Catalogo Conecta\n\n{resumen}\n\n" + "".join(f"- ❌ {e}\n" for e in errores))
-    with open("last_run.txt", "w", encoding="utf-8") as fh:
-        fh.write(f"{h_lima} | {resumen}\n")
+            fh.write(f"### Catalogo Conecta\n\n{resumen}\n\n" + "".join(f"- ❌ {e}\n" for e in errores)
+                     + "".join(f"- ⚠️ {a}\n" for a in avisos))
+    escribir_last_run(resumen, errores, avisos)
     # Con errores la corrida queda en rojo, pero las piezas que si salieron se suben igual.
     if errores:
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        # Se cayo a medias (Sheets no responde, credenciales, etc.): que el Calibrador lo diga.
+        escribir_last_run("La corrida se cayo antes de terminar", [f"{type(e).__name__}: {str(e)[:300]}"])
+        raise
